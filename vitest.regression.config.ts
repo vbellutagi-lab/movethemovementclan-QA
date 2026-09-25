@@ -9,12 +9,22 @@ import base from "./vitest.config";
  * CLI flags (--testTimeout=...) were tried first and did NOT reliably override the config file's
  * testTimeout in this vitest version — a dedicated config file is the version-proof way to do it.
  */
+// REGRESSION_RUN_DIR is set by scripts/run-regression.mjs so this run's JSON results land
+// under that versioned, timestamped folder alongside the e2e report/screenshots.
+const RUN_DIR = process.env.REGRESSION_RUN_DIR;
+
 export default mergeConfig(
   base,
   defineConfig({
     test: {
       testTimeout: 70 * 60_000,
       hookTimeout: 70 * 60_000,
+      ...(RUN_DIR
+        ? {
+            reporters: ["default", "json"],
+            outputFile: { json: `${RUN_DIR}/integration/results.json` },
+          }
+        : {}),
     },
   }),
 );

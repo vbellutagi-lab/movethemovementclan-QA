@@ -36,6 +36,48 @@ npm run e2e            # browser e2e suite (src/e2e) — Playwright against the 
 npm run typecheck
 ```
 
+## Full regression before a deploy
+
+```bash
+npm run regression                    # prompts for a version/release label
+npm run regression -- v1.2.0          # or pass it directly
+npm run regression -- v1.2.0 --skip-integration   # e2e only
+npm run regression -- v1.2.0 --skip-e2e           # integration only
+```
+
+Runs the integration suite (Vitest, API-level) and the e2e suite (Playwright, browser-level)
+back to back and files everything under `regression-runs/<version>_<timestamp>/`:
+
+```
+regression-runs/v1.2.0_2026-09-25_15-45-57/
+  SUMMARY.md                          pass/fail counts + links, read this first
+  integration/results.json            raw Vitest JSON results
+  e2e/playwright-report/index.html    open with: npx playwright show-report <path>
+  e2e/test-results/                   failure screenshots, traces, video (per Playwright's
+                                       screenshot: "only-on-failure" in playwright.config.ts)
+```
+
+Nothing here overwrites a previous run — every run gets its own folder, so past regression
+results stay around for comparison. `regression-runs/LATEST` always names the most recent run.
+This folder isn't committed (see `.gitignore`); treat it as local/CI build output.
+
+## Adding test cases for a new feature (tag → develop diff)
+
+Before writing new test cases, get a summary of what actually changed in the app repo between
+a released tag and `develop` (or a feature branch):
+
+```bash
+npm run diff:since-tag -- v1.1.0                       # v1.1.0..develop in ../movethemovementclan
+npm run diff:since-tag -- v1.1.0 --branch=feature/x    # against a specific branch instead
+npm run diff:since-tag -- v1.1.0 --app-repo=/path      # if the app repo isn't a sibling folder
+```
+
+This writes a commit log + changed-files stat to `docs/change-summaries/` (also not committed —
+it's a working artifact, regenerate it whenever you need it). Review it, then ask Claude to draft
+new integration/e2e test cases for each feature area it touches — the diffing is scripted, but
+turning a diff into meaningful test cases is a judgment call best done per-feature, not blindly
+automated.
+
 The integration suite runs files **sequentially** (`fileParallelism: false` in
 `vitest.config.ts`), deliberately — it drives one shared, real seeded org/client, not an isolated
 DB per test file, so parallel files would race for the same bookable sessions and credit balance.
