@@ -1,0 +1,1837 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Fault Lines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --bg: #0a1c37;
+    --bg-grid: rgba(129, 196, 232, 0.055);
+    --surface: #11294c;
+    --surface-raised: #17335c;
+    --surface-sunk: #0d2140;
+    --ink: #eef4fb;
+    --ink-soft: #a3badb;
+    --ink-faint: #67809f;
+    --line: #24406e;
+    --line-strong: #3a628f;
+    --accent: #74d4ef;
+    --accent-dim: #4f9dbd;
+    --accent-bg: rgba(116, 212, 239, 0.1);
+
+    --p0: #ff7a6b;
+    --p0-bg: rgba(255, 122, 107, 0.14);
+    --p1: #f4bd52;
+    --p1-bg: rgba(244, 189, 82, 0.14);
+    --p2: #9fb2d1;
+    --p2-bg: rgba(159, 178, 209, 0.1);
+
+    --live: #ff7a6b;
+    --live-bg: rgba(255, 122, 107, 0.16);
+    --pass: #5fd99a;
+    --pass-bg: rgba(95, 217, 154, 0.14);
+    --fixed: #5fd99a;
+    --fixed-bg: rgba(95, 217, 154, 0.16);
+    --partial: #f4bd52;
+    --partial-bg: rgba(244, 189, 82, 0.14);
+    --code-only: #7fb8e0;
+    --code-bg: rgba(127, 184, 224, 0.12);
+    --scenario: #67809f;
+    --scenario-bg: rgba(103, 128, 159, 0.12);
+
+    --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+    --font-body: "IBM Plex Sans", -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      repeating-linear-gradient(0deg, var(--bg-grid) 0 1px, transparent 1px 88px),
+      repeating-linear-gradient(90deg, var(--bg-grid) 0 1px, transparent 1px 88px);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--accent-bg);
+    color: var(--ink);
+  }
+  a {
+    color: var(--accent);
+  }
+  a:not(.pill):not(.jump-link) {
+    text-decoration-color: var(--accent-dim);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  code,
+  .mono {
+    font-family: var(--font-mono);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-wrap: balance;
+    margin: 0;
+    color: var(--ink);
+  }
+  p {
+    max-width: 74ch;
+  }
+  table code,
+  p code,
+  li code {
+    font-family: var(--font-mono);
+    font-size: 0.91em;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    padding: 0.05em 0.4em;
+    border-radius: 3px;
+    color: #cfe9f5;
+  }
+
+  /* ---------- layout shell ---------- */
+  .shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 900px);
+    gap: 0;
+    justify-content: center;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  @media (max-width: 980px) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 780px;
+    }
+    .rail {
+      display: none;
+    }
+  }
+
+  /* ---------- left rail ---------- */
+  .rail {
+    position: sticky;
+    top: 2rem;
+    align-self: start;
+    padding-right: 1.75rem;
+    height: fit-content;
+  }
+  .rail-block {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 0.9rem 1rem 1.05rem;
+    margin-bottom: 1rem;
+  }
+  .rail-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-dim);
+    margin: 0 0 0.6rem;
+  }
+  .jump-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+  }
+  .jump-link {
+    display: flex;
+    gap: 0.55rem;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 0.83rem;
+    padding: 0.32rem 0.3rem;
+    border-radius: 3px;
+    line-height: 1.35;
+  }
+  .jump-link:hover {
+    background: var(--accent-bg);
+    color: var(--ink);
+  }
+  .jump-link .num {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    flex: none;
+    width: 1.1em;
+  }
+  .rail-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .rail-legend .status {
+    margin-right: 0.4rem;
+  }
+  .rail-toggle-all {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0 0 0.7rem;
+  }
+  .rail-toggle-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    color: var(--accent);
+    background: var(--accent-bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    padding: 0.32rem 0.4rem;
+    cursor: pointer;
+  }
+  .rail-toggle-btn:hover {
+    background: var(--accent-dim);
+    color: var(--surface);
+  }
+
+  /* ---------- title block ---------- */
+  .titleblock {
+    border: 1px solid var(--line-strong);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-sunk) 100%);
+    border-radius: 6px;
+    padding: 1.9rem 2rem 1.6rem;
+    position: relative;
+  }
+  .titleblock::before,
+  .titleblock::after,
+  .corner-box::before,
+  .corner-box::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--accent-dim);
+    opacity: 0.7;
+  }
+  .titleblock::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+  }
+  .titleblock::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+  }
+  .eyebrow-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.65rem;
+  }
+  .titleblock h1 {
+    font-size: clamp(2.1rem, 4.5vw, 2.9rem);
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+  .titleblock .subhead {
+    margin-top: 0.6rem;
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+    max-width: 60ch;
+  }
+  .meta-grid {
+    margin-top: 1.6rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .meta-cell {
+    background: var(--surface);
+    padding: 0.6rem 0.8rem;
+  }
+  .meta-cell .k {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .meta-cell .v {
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    color: var(--ink);
+  }
+
+  /* ---------- stat tiles ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.85rem;
+    margin-top: 1.75rem;
+  }
+  .stat {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 5px;
+    padding: 0.95rem 1.05rem 1.05rem;
+  }
+  .stat .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+    display: block;
+  }
+  .stat .label {
+    margin-top: 0.5rem;
+    font-size: 0.79rem;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .stat.alarm .num {
+    color: var(--p0);
+  }
+
+  /* ---------- intro / prose ---------- */
+  .intro {
+    margin-top: 2.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .intro p {
+    color: var(--ink-soft);
+    font-size: 0.97rem;
+  }
+  .legend-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.4rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+    font-size: 0.83rem;
+    color: var(--ink-soft);
+  }
+  .legend-strip b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ---------- sections ---------- */
+  section.cat {
+    margin-top: 3.4rem;
+    scroll-margin-top: 1.5rem;
+  }
+  .cat-head {
+    position: relative;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 0.85rem 1.15rem 0.9rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    margin-bottom: 1.15rem;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .cat-head:hover {
+    border-color: var(--accent-dim);
+  }
+  .cat-chevron {
+    margin-left: auto;
+    flex: none;
+    align-self: center;
+    color: var(--accent-dim);
+    font-size: 0.8rem;
+    transition: transform 0.18s ease;
+  }
+  .cat-head[aria-expanded="false"] .cat-chevron {
+    transform: rotate(-90deg);
+  }
+  .cat-body[hidden] {
+    display: none;
+  }
+  .cat-head .num {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    color: var(--accent);
+    font-weight: 600;
+    flex: none;
+  }
+  .cat-head h2 {
+    font-size: 1.32rem;
+    letter-spacing: -0.005em;
+  }
+  .cat-intro {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0 0 1.15rem;
+  }
+  .cat-intro code {
+    white-space: nowrap;
+  }
+  .callout {
+    border-left: 3px solid var(--accent-dim);
+    background: var(--accent-bg);
+    border-radius: 0 4px 4px 0;
+    padding: 0.85rem 1.05rem;
+    font-size: 0.89rem;
+    color: var(--ink-soft);
+    margin: 0 0 1.15rem;
+  }
+  .callout b {
+    color: var(--ink);
+  }
+
+  /* ---------- tables ---------- */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--surface);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    min-width: 640px;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-raised);
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--line-strong);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  tbody tr:hover {
+    background: var(--surface-sunk);
+  }
+  td.id {
+    font-family: var(--font-mono);
+    color: var(--accent-dim);
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+  td.scenario .title {
+    color: var(--ink);
+  }
+  td.scenario .route {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: #cfe9f5;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    padding: 0.06rem 0.45rem;
+    border-radius: 3px;
+  }
+  td.note {
+    color: var(--ink-faint);
+    font-size: 0.82rem;
+    margin-top: 0.35rem;
+    display: block;
+    max-width: 34ch;
+  }
+
+  /* ---------- pills ---------- */
+  .sev {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.18rem 0.5rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .sev-p0 {
+    color: var(--p0);
+    background: var(--p0-bg);
+    border: 1px solid rgba(255, 122, 107, 0.35);
+  }
+  .sev-p1 {
+    color: var(--p1);
+    background: var(--p1-bg);
+    border: 1px solid rgba(244, 189, 82, 0.35);
+  }
+  .sev-p2 {
+    color: var(--p2);
+    background: var(--p2-bg);
+    border: 1px solid rgba(159, 178, 209, 0.3);
+  }
+  .sev-desc {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.79rem;
+    color: var(--ink-faint);
+    max-width: 30ch;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    font-family: var(--font-mono);
+    font-size: 0.71rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.55rem 0.2rem 0.45rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .status--live {
+    color: var(--live);
+    background: var(--live-bg);
+    border: 1px solid rgba(255, 122, 107, 0.4);
+  }
+  .status--live::before {
+    background: var(--live);
+    box-shadow: 0 0 0 3px rgba(255, 122, 107, 0.18);
+  }
+  .status--pass {
+    color: var(--pass);
+    background: var(--pass-bg);
+    border: 1px solid rgba(95, 217, 154, 0.35);
+  }
+  .status--pass::before {
+    background: var(--pass);
+  }
+  .status--partial {
+    color: var(--partial);
+    background: var(--partial-bg);
+    border: 1px solid rgba(244, 189, 82, 0.35);
+  }
+  .status--partial::before {
+    background: var(--partial);
+  }
+  .status--code {
+    color: var(--code-only);
+    background: var(--code-bg);
+    border: 1px solid rgba(127, 184, 224, 0.35);
+  }
+  .status--code::before {
+    background: var(--code-only);
+  }
+  .status--scenario {
+    color: var(--scenario);
+    background: var(--scenario-bg);
+    border: 1px solid rgba(103, 128, 159, 0.3);
+  }
+  .status--scenario::before {
+    background: transparent;
+    border: 1px solid var(--scenario);
+  }
+  .status--fixed {
+    color: var(--fixed);
+    background: var(--fixed-bg);
+    border: 1px solid rgba(95, 217, 154, 0.4);
+  }
+  .status--fixed::before {
+    background: var(--fixed);
+    box-shadow: 0 0 0 3px rgba(95, 217, 154, 0.18);
+  }
+
+  /* ---------- findings list (section 8) ---------- */
+  .finding {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    border-radius: 5px;
+    padding: 1rem 1.15rem 1.1rem;
+    margin-bottom: 0.9rem;
+    display: flex;
+    gap: 0.9rem;
+  }
+  .finding .tag {
+    flex: none;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: var(--live-bg);
+    color: var(--live);
+    border: 1px solid rgba(255, 122, 107, 0.35);
+  }
+  .finding h3 {
+    font-size: 0.97rem;
+    font-family: var(--font-body);
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+  .finding p {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: none;
+  }
+
+  .scope-list {
+    display: grid;
+    gap: 0.7rem;
+    margin: 0;
+  }
+  .scope-list li {
+    list-style: none;
+    border-left: 2px solid var(--line-strong);
+    padding-left: 0.9rem;
+    font-size: 0.89rem;
+    color: var(--ink-soft);
+  }
+  .scope-list b {
+    color: var(--ink);
+  }
+
+  .req-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.7rem;
+  }
+  .req-card {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 0.75rem 0.9rem;
+  }
+  .req-card .id {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .req-card p {
+    font-size: 0.83rem;
+    color: var(--ink-soft);
+    margin: 0.35rem 0 0;
+  }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  /* ---------- filter bar ---------- */
+  .filter-bar {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem 1.5rem;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 0.8rem 1.05rem;
+    position: sticky;
+    top: 0.6rem;
+    z-index: 5;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .filter-label {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-right: 0.15rem;
+  }
+  .filter-toggle {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    transition: opacity 0.15s ease;
+  }
+  .filter-toggle[aria-pressed="false"] {
+    opacity: 0.3;
+    filter: grayscale(0.7);
+  }
+  .filter-toggle:hover {
+    opacity: 0.85;
+  }
+  .filter-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-left: auto;
+  }
+  .filter-count {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .filter-reset {
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: var(--font-mono);
+    font-size: 0.71rem;
+    color: var(--accent);
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    padding: 0.28rem 0.6rem;
+    cursor: pointer;
+  }
+  .filter-reset:hover {
+    background: var(--accent-bg);
+  }
+  @media (max-width: 640px) {
+    .filter-bar {
+      position: static;
+    }
+    .filter-meta {
+      margin-left: 0;
+    }
+  }
+</style>
+
+<div class="shell">
+  <nav class="rail" aria-label="Section navigation">
+    <div class="rail-block">
+      <p class="rail-eyebrow">Sections</p>
+      <div class="rail-toggle-all">
+        <button type="button" id="expandAllBtn" class="rail-toggle-btn">Expand all</button>
+        <button type="button" id="collapseAllBtn" class="rail-toggle-btn">Collapse all</button>
+      </div>
+      <ul class="jump-nav">
+        <li><a class="jump-link" href="#s1"><span class="num">1</span>Cross-tenant IDOR</a></li>
+        <li><a class="jump-link" href="#s2"><span class="num">2</span>Auth &amp; session</a></li>
+        <li><a class="jump-link" href="#s3"><span class="num">3</span>Injection &amp; mass assignment</a></li>
+        <li><a class="jump-link" href="#s4"><span class="num">4</span>Race conditions</a></li>
+        <li><a class="jump-link" href="#s5"><span class="num">5</span>Rate limiting</a></li>
+        <li><a class="jump-link" href="#s6"><span class="num">6</span>Authorization matrix</a></li>
+        <li><a class="jump-link" href="#s6a"><span class="num">6a</span>Coach-scoping</a></li>
+        <li><a class="jump-link" href="#s7"><span class="num">7</span>Functional edge cases</a></li>
+        <li><a class="jump-link" href="#s8"><span class="num">8</span>Extra findings</a></li>
+        <li><a class="jump-link" href="#s9"><span class="num">9</span>Out of scope</a></li>
+        <li><a class="jump-link" href="#s10"><span class="num">10</span>Requirements map</a></li>
+        <li><a class="jump-link" href="#s11"><span class="num">11</span>QA gaps (self-assessment)</a></li>
+      </ul>
+    </div>
+    <div class="rail-block">
+      <p class="rail-eyebrow">Status key</p>
+      <div class="rail-legend">
+        <div><span class="status status--live">live</span> <b>ACTUAL BUG, still open</b> — confirmed broken against a running instance, not yet fixed</div>
+        <div><span class="status status--fixed">fixed</span> was a confirmed bug, now verified remediated (round 3)</div>
+        <div><span class="status status--pass">pass</span> <b>NOT a bug</b> — confirmed working correctly (automated test, or a live attack that the app defended against)</div>
+        <div><span class="status status--partial">partial</span> part of the chain automated; not fully resolved either way</div>
+        <div><span class="status status--code">code</span> confirmed by reading source only — not yet run</div>
+        <div><span class="status status--scenario">open</span> cataloged, not yet tested at all — unknown either way</div>
+      </div>
+      <p style="margin: 0.7rem 0 0; font-size: 0.72rem; color: var(--ink-faint); line-height: 1.5">
+        Only <span style="color: var(--live)">live</span> rows are things to fix. Everything
+        <span style="color: var(--pass)">green</span> already works.
+      </p>
+    </div>
+  </nav>
+
+  <main>
+    <header class="titleblock">
+      <span class="eyebrow-label">QA / Security &middot; Scenario Catalog</span>
+      <h1>Fault Lines</h1>
+      <p class="subhead">
+        A threat model and test-scenario catalog for <strong>movethemovementclan</strong>, a
+        multi-tenant fitness-studio booking platform — built by reading its own architecture
+        decisions and stated security requirements, then verified by actually attacking a running
+        instance. Living document, now on its third audit round — round 3 re-attacks every round
+        1/2 finding to check what the team actually fixed.
+      </p>
+      <div class="meta-grid">
+        <div class="meta-cell"><span class="k">Subject</span><span class="v">movethemovementclan</span></div>
+        <div class="meta-cell"><span class="k">Method</span><span class="v">black-box · HTTP + browser</span></div>
+        <div class="meta-cell"><span class="k">Stack</span><span class="v">tRPC · Postgres · Better&nbsp;Auth</span></div>
+        <div class="meta-cell"><span class="k">Rev</span><span class="v">2026-09-15 · round 3</span></div>
+      </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="num">9</span>
+        <span class="label">of 12 confirmed cross-tenant vulnerabilities fixed and re-verified live today (2026-09-15), across two remediation commits (<code>8e024df</code>, <code>8243252</code>)</span>
+      </div>
+      <div class="stat alarm">
+        <span class="num">2</span>
+        <span class="label">P0 cross-tenant vulnerabilities still live, unpatched — <code>coaches.list</code> (§1.14) and <code>credits.getBalancesForClients</code> (§1.13), re-confirmed against the live instance today</span>
+      </div>
+      <div class="stat">
+        <span class="num">43 / 52</span>
+        <span class="label">integration checks currently green — the 9 red ones are the round-1/2 exploit-confirmation tests now correctly failing because the bugs they proved are fixed (tests need flipping to assert the new secure behavior, not a regression)</span>
+      </div>
+      <div class="stat">
+        <span class="num">66</span>
+        <span class="label">scenarios cataloged across 8 categories, three audit rounds</span>
+      </div>
+      <div class="stat">
+        <span class="num">6</span>
+        <span class="label">additional protocol/functional findings (idempotency, status-code drift, session revocation delay, missing confirmation email, a status-code shift on the credits fix)</span>
+      </div>
+      <div class="stat alarm">
+        <span class="num">6</span>
+        <span class="label">total open bugs across the whole suite that still need a code fix (2 P0, 4 P1) — full list with links in the box just below</span>
+      </div>
+    </div>
+
+    <div class="callout" id="open-bugs" style="border-left-color: var(--live); margin-top: 1.75rem">
+      <b>Open bugs — what actually still needs fixing (as of 2026-09-18).</b> Every
+      <span class="status status--fixed">fixed</span> and <span class="status status--pass">pass</span>
+      row elsewhere in this document means the app is already correct there — nothing to do.
+      This box is only the <span class="status status--live">live</span> rows: confirmed, currently
+      broken, unpatched. Click any link to jump straight to it.
+      <div style="margin-top: 1rem; display: grid; gap: 0.9rem">
+        <div>
+          <b style="color: var(--p0)">P0 — fix first</b>
+          <ul class="scope-list" style="margin-top: 0.4rem">
+            <li><a class="open-bug-link" href="#s1"><b>§1.13</b></a> — <code>credits.getBalancesForClients</code> leaks any org's client balances in one batched call, spanning unrelated orgs</li>
+            <li><a class="open-bug-link" href="#s1"><b>§1.14</b></a> — <code>coaches.list</code> has no org filter at all — any admin sees every coach, platform-wide</li>
+          </ul>
+        </div>
+        <div>
+          <b style="color: var(--p1)">P1 — fix next</b>
+          <ul class="scope-list" style="margin-top: 0.4rem">
+            <li><a class="open-bug-link" href="#s1"><b>§1.9</b></a> — a foreign org's centre id is discoverable via <code>listCentres</code>, then usable to self-enroll</li>
+            <li><a class="open-bug-link" href="#s2"><b>§2.11</b></a> — password change doesn't immediately revoke other live sessions (~5 min window)</li>
+            <li><a class="open-bug-link" href="#s2"><b>§2.12</b></a> — the &ldquo;your password was changed&rdquo; confirmation email never sends</li>
+            <li><a class="open-bug-link" href="#s3"><b>§3.6</b></a> — idempotency key on <code>bookings.create</code> doesn't bind to request parameters (reuse with a different session silently returns the old booking)</li>
+          </ul>
+        </div>
+        <div>
+          <b style="color: var(--p2)">P2 — low priority / cosmetic</b>
+          <ul class="scope-list" style="margin-top: 0.4rem">
+            <li><a class="open-bug-link" href="#s1"><b>§1.17</b></a> — minor id-echo inconsistency on the batched balances endpoint (not a leak)</li>
+            <li><a class="open-bug-link" href="#s8"><b>§8</b></a> — <code>InsufficientCreditsError</code> documented as HTTP 422, actually delivered as 400</li>
+            <li><a class="open-bug-link" href="#s8"><b>§8</b></a> — booking creation returns HTTP 200, not the documented 201</li>
+          </ul>
+        </div>
+        <div>
+          <b style="color: var(--ink-faint)">Needs a product/security decision — NOT confirmed as a bug</b>
+          <ul class="scope-list" style="margin-top: 0.4rem">
+            <li><a class="open-bug-link" href="#s1"><b>§1.16</b></a> — <code>organizations.listPackages</code> is readable cross-org by any signed-in user; likely intentional (backs public pre-signup browsing), but no one has confirmed that — don't &ldquo;fix&rdquo; until someone does</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="intro">
+      <p>
+        Black-box QA against a fitness-studio multi-tenant SaaS: orgs (&ldquo;studios&rdquo;),
+        centres, coaches, staff, clients, class templates &rarr; sessions, credit lots/ledger,
+        bookings, cancellation policy. Auth is Better Auth with a JWT in an httpOnly cookie, on two
+        independent role axes — <code>user.role</code> (platform: <code>user</code> /
+        <code>superadmin</code>) and <code>member.role</code> (per-org: <code>member</code> /
+        <code>admin</code> / <code>owner</code>).
+      </p>
+      <p>
+        Built from the app's own architecture decisions (<code>documents/architecture/decisions/</code>),
+        its stated security requirements (<code>documents/internals/security.html</code>), its
+        existing manual QA docs and Postman collection (<code>documents/test/</code>), and a full
+        read of every tRPC route, procedure guard, and service in <code>packages/trpc</code> /
+        <code>packages/services</code>.
+      </p>
+      <div class="legend-strip">
+        <span><b>P0</b> — exploitable now, no special access beyond &ldquo;any org's admin&rdquo;</span>
+        <span><b>P1</b> — exploitable given a plausible extra condition (UUID leak, multi-org account, timing)</span>
+        <span><b>P2</b> — hygiene / defense-in-depth / infra we can't reach black-box</span>
+      </div>
+    </div>
+
+    <div class="filter-bar" id="filterBar" role="group" aria-label="Filter scenario tables">
+      <div class="filter-group" data-filter-group="status">
+        <span class="filter-label">Status</span>
+        <button type="button" class="filter-toggle status status--live" data-filter="status" data-value="live" aria-pressed="true">live</button>
+        <button type="button" class="filter-toggle status status--fixed" data-filter="status" data-value="fixed" aria-pressed="true">fixed</button>
+        <button type="button" class="filter-toggle status status--pass" data-filter="status" data-value="pass" aria-pressed="true">pass</button>
+        <button type="button" class="filter-toggle status status--partial" data-filter="status" data-value="partial" aria-pressed="true">partial</button>
+        <button type="button" class="filter-toggle status status--code" data-filter="status" data-value="code" aria-pressed="true">code</button>
+        <button type="button" class="filter-toggle status status--scenario" data-filter="status" data-value="scenario" aria-pressed="true">open</button>
+      </div>
+      <div class="filter-group" data-filter-group="sev">
+        <span class="filter-label">Severity</span>
+        <button type="button" class="filter-toggle sev sev-p0" data-filter="sev" data-value="p0" aria-pressed="true">P0</button>
+        <button type="button" class="filter-toggle sev sev-p1" data-filter="sev" data-value="p1" aria-pressed="true">P1</button>
+        <button type="button" class="filter-toggle sev sev-p2" data-filter="sev" data-value="p2" aria-pressed="true">P2</button>
+      </div>
+      <div class="filter-meta">
+        <span id="filterCount" class="filter-count"></span>
+        <button type="button" id="filterReset" class="filter-reset">Reset</button>
+      </div>
+    </div>
+
+    <!-- ============ SECTION 1 ============ -->
+    <section class="cat" id="s1">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s1-body"><span class="num">01</span><h2>Cross-tenant broken object-level authorization</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s1-body">
+      <p class="cat-intro">
+        The headline finding. The codebase has a real, followed convention for this exact problem
+        — <code>identityProcedure</code>'s own doc comment in <code>packages/trpc/server/trpc.ts</code>
+        says it outright: <em>&ldquo;there is no Postgres row-level security wired up&hellip; treat
+        any client id arriving via <code>.input()</code> as untrusted.&rdquo;</em> Routes like
+        <code>bookings.cancel</code>, <code>booking-oversight.*</code>,
+        <code>schedule-exceptions.*</code>, and <code>clients.enroll</code> all follow it: they
+        check the caller's own org/client id against the target row before acting, usually
+        returning <strong>404</strong> (not 403) on a cross-org match so existence itself isn't
+        leaked (ADR 0016, ADR 0035).
+      </p>
+      <div class="callout">
+        <b>Three route families skip that check entirely.</b> <code>credits.*</code>,
+        <code>classTemplates.*</code>, and <code>sessionTypes.*</code> are gated by
+        <code>orgProcedure("admin")</code> — the caller must be admin/owner of <em>some</em> org —
+        but never verify the target object belongs to <em>that</em> org. Any studio's admin
+        account is sufficient. No special privilege, no guessing beyond a UUID.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Scenario</th><th>Status</th><th>Severity</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="id">1.1</td>
+              <td class="scenario"><span class="title">Org-A admin reads Org-B client's credit balance</span><span class="route">credits.getBalances</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Financial PII, cross-tenant read</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.2</td>
+              <td class="scenario"><span class="title">Org-A admin grants free credits to an Org-B client, spendable at Org-B's centres</span><span class="route">credits.grant</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Financial integrity; no tenant-linked audit trail</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.3</td>
+              <td class="scenario"><span class="title">Org-A admin drains / zeroes an Org-B client's credit lot</span><span class="route">credits.reverse</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Directly &ldquo;deletes someone else's money&rdquo;</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.4</td>
+              <td class="scenario"><span class="title">Org-A admin extends the expiry of an Org-B credit lot</span><span class="route">credits.extendExpiry</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.5</td>
+              <td class="scenario"><span class="title">Any org's admin lists <em>every</em> organization's class-template schedule — zero guessing, <code>list()</code> has no <code>WHERE</code> clause at all</span><span class="route">classTemplates.list</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — list is now org-scoped, re-attacked today</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Full cross-tenant enumeration; seeds 1.6/1.7's target ids</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.6</td>
+              <td class="scenario"><span class="title">Org-A admin reschedules / recapacities / re-coaches an Org-B class template</span><span class="route">classTemplates.update</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.7</td>
+              <td class="scenario"><span class="title">Org-A admin creates a class template pointed at Org-B's <code>centreId</code>/<code>coachId</code></span><span class="route">classTemplates.create</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — create now verifies centreId/coachId belong to caller's org; code + updated service-test verified, no dedicated live attack in this suite</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.8</td>
+              <td class="scenario"><span class="title">Any org's admin lists / updates all <code>sessionTypes</code> platform-wide — pricing, capacity, roster-privacy</span><span class="route">sessionTypes.list / update</span><span class="note">Fixed 2026-09-15 (<code>8e024df</code> + <code>8243252</code>) — sessionTypes got its own organizationId column, wired through; same route as 1.15, re-attacked today</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.9</td>
+              <td class="scenario"><span class="title">Chain: discover a foreign org's centre id via <code>listCentres</code> (any authenticated caller, any org), then self-enroll via <code>clients.join</code></span><span class="route">organizations.listCentres &rarr; clients.join</span><span class="note">Not touched by the round-3 fix commits — unchanged</span></td>
+              <td><span class="status status--partial">partial</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Capped to one success per user (ADR 0032)</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.10</td>
+              <td class="scenario"><span class="title">Client books a session belonging to a different org's centre, if a foreign <code>sessionId</code> is ever obtainable</span><span class="route">bookings.create</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — client's home centre and the session's centre are now cross-checked before booking; the fix commit cites this exact finding by number in its own code comment</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p2">P2</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top: 1rem; font-size: 0.87rem; color: var(--ink-faint)">
+        <strong style="color: var(--ink-soft)">Reference pattern that should have been reused
+        everywhere above:</strong> <code>booking-oversight.listForClient</code> takes the identical
+        input shape (staff supplies a <code>clientId</code>) but calls
+        <code>repository.findClientOrganizationId(clientId)</code> and 404s on a mismatch before
+        doing anything else. <code>credits.*</code> is the same shape with that one check missing.
+      </p>
+
+      <div class="callout" style="margin-top: 1.5rem; border-left-color: var(--p0)">
+        <b>Round 2 (2026-09-14) — the same bug, unfixed, plus fresh instances.</b> A follow-up
+        audit of everything added since the findings above (50 commits, +12,058/&minus;118 lines)
+        found the original <code>credits.*</code> bug was never fixed, and the identical
+        missing-org-check shape was written into brand-new code three more times. Against that,
+        most new routers (<code>booking-oversight</code>, <code>billing</code>,
+        <code>packages</code>, <code>staff</code>, <code>attendance</code>,
+        <code>schedule-exceptions</code>) resolve the target's org correctly &mdash; this is a
+        two-tier codebase where the mature pattern and the leftover baseline pattern coexist.
+      </div>
+      <div class="table-wrap" style="margin-top: 1rem">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Route</th><th>Status</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="id">1.11</td>
+              <td class="scenario"><span class="title"><code>credits.reverse</code> never validates lot ownership — not even via the <code>clientId</code> field it accepts: drains a lot granted entirely by the real owner, spoofing an unrelated real client's id in the ledger</span><span class="route">credits.reverse</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Also audit-log poisoning — the ledger records whichever clientId is supplied</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.12</td>
+              <td class="scenario"><span class="title">Zero ownership check at all — doesn't even accept a <code>clientId</code> to cross-check against</span><span class="route">credits.extendExpiry</span><span class="note">Fixed 2026-09-15 (<code>8243252</code>) — re-attacked today, now 404s</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.13</td>
+              <td class="scenario"><span class="title">New batched endpoint reproduces the <code>getBalances</code> bug: up to 100 clients' balances in one call, spanning any number of unrelated orgs</span><span class="route">credits.getBalancesForClients</span><span class="note">ACTUAL BUG, STILL OPEN — re-attacked 2026-09-15, unchanged. The <code>8243252</code> fix touched grant/reverse/extendExpiry/getBalances but not this batched sibling; not in the remediation plan's scope either</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Coach axis was scoped correctly one commit later; org axis never added</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.14</td>
+              <td class="scenario"><span class="title">No filter of any kind — any org's admin sees every coach at every studio, platform-wide</span><span class="route">coaches.list</span><span class="note">ACTUAL BUG, STILL OPEN — re-attacked 2026-09-15, unchanged. No commit has touched <code>packages/services/coaches</code> or its route since round 2</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Also feeds enroll/reassign coachId pickers — no id-guessing needed</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.15</td>
+              <td class="scenario"><span class="title">Upgraded from read-only to a confirmed cross-tenant WRITE: any org's admin can silently rewrite capacity/cost/roster-visibility on a session type every other studio's schedule depends on</span><span class="route">sessionTypes.list / update</span><span class="note">Fixed 2026-09-15 (<code>8e024df</code> + <code>8243252</code>) — session_types now has its own organizationId column, re-attacked today</span></td>
+              <td><span class="status status--fixed">fixed</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">session_types has no organizationId column at all, by schema design</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.16</td>
+              <td class="scenario"><span class="title">Any authenticated user — no org membership required, protectedProcedure only — reads another studio's package catalog and pricing by slug</span><span class="route">organizations.listPackages</span><span class="note">NOT CONFIRMED AS A BUG — behavior unchanged since round 1. Likely intentional (backs public pre-signup browsing) but never confirmed either way by the team — don't fix until someone says whether this should be scoped</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p2">P2</span><span class="sev-desc">Likely intentional — backs pre-signup /join/[slug] browsing; flagged for team confirmation</span></td>
+            </tr>
+            <tr>
+              <td class="id">1.17</td>
+              <td class="scenario"><span class="title">Minor: echoes back every requested clientId (even excluded/nonexistent ones) with an empty balances array, instead of omitting the row</span><span class="route">credits.getBalancesForClients</span><span class="note">REAL BUT LOW-PRIORITY — a genuine inconsistency, still unfixed, but NOT a security leak (no real balance data escapes). Safe to deprioritize below the P0/P1 items</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p2">P2</span><span class="sev-desc">Informational only — no real balance data escapes, no existence-probing oracle either</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top: 1rem; font-size: 0.87rem; color: var(--ink-faint)">
+        <strong style="color: var(--ink-soft)">Not automated from this round:</strong>
+        <code>credit-requests.create</code> (coach-callable, medium confidence) lets a coach file a
+        pending credit request naming an arbitrary <code>clientId</code> with no ownership check —
+        skipped for its fixture cost relative to payoff (no direct read/write leak; the risk is a
+        misattributed request surfacing in a stranger org's review queue).
+        <code>sessions.getById</code> has no centre/org join in <code>findById</code> — high
+        confidence, but reproducing it needs a second org with its own centre, and there's no API
+        route to create one (seed-script/DB only) — same unreachable shape as §1.10.
+      </p>
+
+      <div class="callout" style="margin-top: 1.5rem; border-left-color: var(--fixed)">
+        <b>Round 3 (2026-09-15) — nine of twelve confirmed live vulnerabilities fixed, re-verified
+        against the running instance today.</b> Two commits landed today,
+        <code>8e024df</code> (schema: <code>session_types</code> gets its own
+        <code>organizationId</code> column) and <code>8243252</code> (&ldquo;fix: cross-tenant BOLA
+        guards for credits, class-templates, bookings, session-types&rdquo;), evidently written
+        directly against this catalog — the booking fix's own code comment cites
+        <b>&ldquo;finding 1.10&rdquo;</b> by number. Re-running this suite's exploit-confirmation
+        tests against the patched instance: §1.1&ndash;1.8, 1.10&ndash;1.12 and 1.15 all now return
+        404 where they previously returned 200 — <b>every one of the round-1 findings is fixed</b>,
+        plus three of round 2's six. <b>Two P0s remain genuinely open and unpatched: §1.13
+        (<code>credits.getBalancesForClients</code>) and §1.14 (<code>coaches.list</code>)</b> —
+        neither route was touched by either commit, and neither appears in the team's own
+        remediation-plan checklist (<code>.lavish/bola-remediation-plan.html</code> on the fix
+        branch), which explicitly scoped itself to §1.1&ndash;1.7 and §1.10. §1.16 and §1.17 are
+        also unchanged, as expected — they were never in scope (informational / possibly
+        intentional, not exploit-confirmed bugs).
+      </div>
+      <div class="callout" style="margin-top: 1rem">
+        <b>Two small things surfaced verifying the fix, neither a vulnerability:</b>
+        <code>credits.reverse</code> against a non-existent <code>lotId</code> now returns
+        <b>404</b> instead of the previously-documented 400 (§7.12) — the new org-ownership check
+        runs before the amount-guard and correctly 404s on a lot it can't find, which is the
+        right behavior (matches the existence-hiding convention used everywhere else), but it
+        means <code>src/integration/credits/admin-credits.test.ts</code>'s
+        &ldquo;reversing a non-existent lot returns 400&rdquo; test is now itself stale and should
+        be updated to expect 404. Separately, <code>credits/index.ts</code>'s
+        <code>getBalancesAsAdmin</code> still carries a doc-comment reading
+        <code>TODO(cross-tenant-bola): org-ownership guard not yet implemented — see red tests</code>
+        directly above the five lines that implement exactly that guard — harmless, but worth
+        deleting before it misleads someone into re-litigating a fixed bug.
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 2 ============ -->
+    <section class="cat" id="s2">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s2-body"><span class="num">02</span><h2>Authentication &amp; session security</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s2-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Status</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="id">2.1</td>
+              <td class="scenario"><span class="title">Every protected route rejects a request with no session cookie at all</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Baseline</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.2</td>
+              <td class="scenario"><span class="title">Every protected route rejects a request with a garbage/malformed cookie value</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Baseline</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.3</td>
+              <td class="scenario"><span class="title"><code>clientProcedure</code> rejects a valid session with no linked <code>clients</code> row</span><span class="note">403, not 404 — ADR 0016</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.4</td>
+              <td class="scenario"><span class="title"><code>orgProcedure("admin")</code> rejects a valid session whose org role is <code>member</code></span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.5</td>
+              <td class="scenario"><span class="title">Cookie theft/replay: a cookie exported from one client and imported into another is accepted identically</span><span class="note">Expected — httpOnly cookies are bearer tokens; no IP/device binding</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p2">P2</span><span class="sev-desc">Informational</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.6</td>
+              <td class="scenario"><span class="title"><code>activeOrganizationId</code> tamper: call Better Auth's own <code>set-active</code> for an org the caller isn't a member of, then hit <code>orgProcedure</code></span><span class="note">NOT A BUG — correctly rejected (403) via the DB re-check; automated in authorization-matrix.test.ts</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Confirms orgProcedure really re-verifies membership server-side, not just session trust</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.7</td>
+              <td class="scenario"><span class="title">5-minute session/role staleness window (ADR 0008's <code>cookieCache</code>): demote or ban mid-session</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Timing-sensitive, needs admin-plugin call</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.8</td>
+              <td class="scenario"><span class="title">Superadmin bypass works for an org the superadmin has no <code>member</code> row in at all</span><span class="note">ADR 0006/0015 — positive control</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.9</td>
+              <td class="scenario"><span class="title">Sign-in enumeration: does the error message differ for an existing vs. non-existent email?</span><span class="note">security.html §4.1 requires uniform responses — checked at the web-UI layer</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.10</td>
+              <td class="scenario"><span class="title">Password policy: sign-up accepts/rejects short, common, breached-pattern passwords</span><span class="note">Client-side min(8) only; no server-side breach screening (auth-gaps.md)</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p2">P2</span><span class="sev-desc">Tracked gap</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.11</td>
+              <td class="scenario"><span class="title">New (2026-09-14). Password change's <code>revokeOtherSessions: true</code> &mdash; UI copy: &ldquo;This signs you out of every other device&rdquo; &mdash; does not immediately revoke a second live session</span><span class="note">ACTUAL BUG, STILL OPEN — concurrent session keeps full API access for up to ~5 minutes, matching the session cookieCache maxAge; confirmed self-healing at +6min. Not touched by any round-3 commit</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Bounded window, but exactly the threat model this feature defends against</span></td>
+            </tr>
+            <tr>
+              <td class="id">2.12</td>
+              <td class="scenario"><span class="title">New (2026-09-14). The &ldquo;Your password was changed&rdquo; confirmation email never sends</span><span class="note">ACTUAL BUG, STILL OPEN — reproduced via UI and direct API; delivery pipeline itself works (verification email for the same address arrives fine). Not touched by any round-3 commit</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Functional regression on a security-notification feature</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 3 ============ -->
+    <section class="cat" id="s3">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s3-body"><span class="num">03</span><h2>Input validation, injection &amp; mass assignment</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s3-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Status</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="id">3.1</td>
+              <td class="scenario"><span class="title">Non-UUID ids rejected with 400 before any DB round-trip</span><span class="note">zod .uuid() on every route reviewed</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Baseline</span></td>
+            </tr>
+            <tr>
+              <td class="id">3.2</td>
+              <td class="scenario"><span class="title">SQL-injection-shaped strings in free-text fields come back inert</span><span class="note">Reasoned safe — Drizzle parameterized throughout; not live-tested</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">3.3</td>
+              <td class="scenario"><span class="title">XSS payload in <code>reason</code>/<code>name</code> stored and returned verbatim</span><span class="note">API layer isn't responsible for encoding — flagged for the web app's rendering layer</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p2">P2</span></td>
+            </tr>
+            <tr>
+              <td class="id">3.4</td>
+              <td class="scenario"><span class="title">Mass assignment: smuggle <code>role</code>, <code>status</code>, <code>organizationId</code>, <code>balanceAfter</code> into request bodies</span><span class="note">Reasoned safe — every schema reviewed is a strict zod allow-list</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">3.5</td>
+              <td class="scenario"><span class="title">Negative / zero amounts in <code>credits.grant</code>/<code>reverse</code></span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">3.6</td>
+              <td class="scenario"><span class="title">Idempotency-key reuse with a DIFFERENT <code>sessionId</code> on <code>bookings.create</code></span><span class="note">ACTUAL BUG, STILL OPEN — returns HTTP 200 with the ORIGINAL booking, silently ignoring the new session. Not touched by any round-3 commit (those fixed cross-tenant org checks, not key-to-parameter binding)</span></td>
+              <td><span class="status status--live">live</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">security.html §7 requires parameter-bound keys</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 4 ============ -->
+    <section class="cat" id="s4">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s4-body"><span class="num">04</span><h2>Race conditions &amp; financial integrity</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s4-body">
+      <p class="cat-intro">ADRs 0018, 0020, 0021, 0025, 0027 — row locks in a fixed order, a TOCTOU-closing guarded credit-lot decrement, and a three-layer idempotency design.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Status</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="id">4.1</td>
+              <td class="scenario"><span class="title">Fire the identical booking request (same idempotency key) twice, concurrently</span><span class="note">NOT A BUG — converges on exactly one booking, not two; the app's 3-layer idempotency design (ADR 0025) holds. Automated in concurrency.test.ts</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Severity = how bad a failure here would be, not a finding</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.2</td>
+              <td class="scenario"><span class="title">Fire two DIFFERENT booking requests, same client, same session, concurrently</span><span class="note">NOT A BUG — the client-row lock (ADR 0021) correctly serializes a client's own attempts: one wins, one gets 409. Automated in concurrency.test.ts</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Severity = how bad a failure here would be, not a finding</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.3</td>
+              <td class="scenario"><span class="title">Two different clients race for the last seat on a capacity:1 session</span><span class="note">NOT A BUG — exactly one wins; the other gets SessionFullError, never a phantom overbook. Automated in concurrency.test.ts</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span><span class="sev-desc">Severity = how bad a failure here would be, not a finding</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.4</td>
+              <td class="scenario"><span class="title">A client with exactly 1 credit fires two different booking requests concurrently</span><span class="note">NOT A BUG — newly isolated and confirmed live 2026-09-18: exactly one booking succeeds (200), the other is correctly rejected for insufficient credit (400), never a phantom double-spend. Now a standing test in concurrency.test.ts</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p0">P0</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.5</td>
+              <td class="scenario"><span class="title">Cancel before the 4h window and confirm the credit is refunded</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Functional</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.6</td>
+              <td class="scenario"><span class="title">Cancel inside the 4h window and confirm NO refund (CANCELLED_LATE)</span><span class="note">Needs a session known to be &lt;4h out — none in seed data land there</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Functional</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.7</td>
+              <td class="scenario"><span class="title">Cancel the same booking twice — rejected, not a double refund</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.8</td>
+              <td class="scenario"><span class="title">Cancel someone else's booking</span><span class="note">Reasoned correct — lockBookingForCancellation scopes by bookingId AND clientId</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p0">P0</span></td>
+            </tr>
+            <tr>
+              <td class="id">4.9</td>
+              <td class="scenario"><span class="title">Admin move inside the client's cancellation window still forfeits a credit</span><span class="note">ADR 0039's accepted policy — functional confirmation, not a bug hunt</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p2">P2</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 5 ============ -->
+    <section class="cat" id="s5">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s5-body"><span class="num">05</span><h2>Rate limiting &amp; resource exhaustion</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s5-body">
+      <p class="cat-intro">
+        No <code>express-rate-limit</code>/equivalent middleware exists on <code>/trpc</code> or
+        <code>/api</code> — confirmed by reading <code>apps/api/src/server.ts</code>, which only
+        configures <code>cors</code>. <code>security.html</code> §5.1 specifies concrete baselines
+        (booking 20/min/user, auth 5/hr/identifier, 100/min/user general) that aren't wired up
+        outside whatever Better Auth's own library default provides for <code>/api/auth/*</code>
+        alone.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Status</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="id">5.1</td>
+              <td class="scenario"><span class="title">Burst N <code>bookings.create</code> calls past the documented 20/min baseline</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Nothing to assert against yet</span></td>
+            </tr>
+            <tr>
+              <td class="id">5.2</td>
+              <td class="scenario"><span class="title">Burst <code>credits.grant</code> / <code>classTemplates.create</code> calls from one admin</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span></td>
+            </tr>
+            <tr>
+              <td class="id">5.3</td>
+              <td class="scenario"><span class="title">Credential-stuffing burst against sign-in</span></td>
+              <td><span class="status status--scenario">open</span></td>
+              <td><span class="sev sev-p1">P1</span><span class="sev-desc">Needs care not to lock out shared seed accounts</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 6 ============ -->
+    <section class="cat" id="s6">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s6-body"><span class="num">06</span><h2>Authorization matrix</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s6-body">
+      <p class="cat-intro" style="margin-bottom: 0">
+        Automated as a single parametrized suite (<code>src/integration/security/authorization-matrix.test.ts</code>,
+        12 checks) rather than one scenario per row: for a representative sample of every procedure
+        tier, assert the full {no session, wrong role, right role wrong org, right role right org}
+        grid returns the expected status. This is the direct automation of
+        <code>security.html</code>'s SEC-API-01 — &ldquo;every procedure must have explicit
+        authentication, role, object, and centre-scope checks&hellip; route-policy inventory and
+        automated negative authorisation suite.&rdquo;
+      </p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 6a ============ -->
+    <section class="cat" id="s6a">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s6a-body"><span class="num">06a</span><h2>Coach-scoping — new access axis, positive control</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s6a-body">
+      <p class="cat-intro">
+        Commits <code>f59e0ac</code>/<code>223f628</code> (2026-09-11) added a third identity axis
+        alongside client/org-role: a <b>coach</b>, resolved server-side from the session
+        (<code>ctx.coach</code>, never trusted from input) and scoped to only their own assigned
+        clients/sessions. Unlike §1's findings, this mechanism is <i>mostly correctly enforced</i>
+        &mdash; this section actually exercises it with a real &ldquo;a colleague's client, same
+        org&rdquo; case (a genuine second coach, built via the real invite&rarr;complete-profile
+        flow, since the seed org's only centre has exactly one pre-existing coach and every
+        self-joined client auto-assigns to them &mdash; an &ldquo;unassigned&rdquo; client isn't a
+        valid test case here at all) rather than trusting the code read.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Status</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="id">6a.1</td>
+              <td class="scenario"><span class="title"><code>clients.list</code> &mdash; a coach sees their own assigned client, not a colleague's</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p2" style="color: var(--pass); background: var(--pass-bg); border-color: rgba(95,217,154,.35)">CORRECT</span></td>
+            </tr>
+            <tr>
+              <td class="id">6a.2</td>
+              <td class="scenario"><span class="title"><code>credits.getBalancesForClients</code> &mdash; a coach cannot read a colleague's client's actual balance data</span><span class="note">See §1.17 for the harmless id-echo quirk found alongside this</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p2" style="color: var(--pass); background: var(--pass-bg); border-color: rgba(95,217,154,.35)">CORRECT</span></td>
+            </tr>
+            <tr>
+              <td class="id">6a.3</td>
+              <td class="scenario"><span class="title">An owner (elevated) sees both clients &mdash; confirms the restriction is coach-specific, not a general filter bug</span></td>
+              <td><span class="status status--pass">pass</span></td>
+              <td><span class="sev sev-p2" style="color: var(--pass); background: var(--pass-bg); border-color: rgba(95,217,154,.35)">CORRECT</span></td>
+            </tr>
+            <tr>
+              <td class="id">6a.4</td>
+              <td class="scenario"><span class="title"><code>attendance.mark</code>/<code>roster</code> reject a coach acting on a session they aren't assigned to</span><span class="note">NotAssignedToSessionError, reasoned correct from findSessionCoach</span></td>
+              <td><span class="status status--code">code</span></td>
+              <td><span class="sev sev-p2" style="color: var(--ink-faint)">not yet live-verified</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 7 ============ -->
+    <section class="cat" id="s7">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s7-body"><span class="num">07</span><h2>Business-logic &amp; functional edge cases</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s7-body">
+      <p class="cat-intro">
+        Mirrors and extends <code>documents/test/move-api.postman_collection.json</code> and the
+        <code>booking-qa-manual.html</code> / <code>auth-qa-manual.html</code> manual runs.
+      </p>
+      <div class="callout">
+        <b>One correction along the way:</b> the checked-in Postman collection's REST URLs are
+        missing the <code>/api</code> prefix (e.g. it calls <code>{baseUrl}/bookings</code> where
+        the live server mounts the REST surface at <code>{baseUrl}/api/bookings</code>). Every
+        request in that collection as currently checked in would 404. This suite uses the correct
+        <code>/api</code> prefix throughout.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Scenario</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="id">7.0</td><td class="scenario"><span class="title">Changed (2026-09-07). <code>clients.enroll</code>'s <code>coachId</code> became required — every enroll fixture now resolves the seed coach id first; <code>clients.join</code>'s self-service path stayed coach-optional (auto-assigns)</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.1</td><td class="scenario"><span class="title">Enroll a new client by email as org admin — happy path</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.2</td><td class="scenario"><span class="title">Enroll as a non-admin (coach) — forbidden</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.3</td><td class="scenario"><span class="title">Enroll into a centre from outside the org</span><span class="note">Rejected as &ldquo;centre not found&rdquo; — same error as a genuinely bad id</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.4</td><td class="scenario"><span class="title">Self-service join when already enrolled — conflict, not a duplicate row</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.5</td><td class="scenario"><span class="title">Enroll with no session at all</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.6</td><td class="scenario"><span class="title">Book a session, happy path; idempotent retry returns the same booking</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.7</td><td class="scenario"><span class="title">Book with zero credits</span><span class="note">Needs a client fixture drained to zero — not yet set up</span></td><td><span class="status status--scenario">open</span></td></tr>
+            <tr><td class="id">7.8</td><td class="scenario"><span class="title">Book a session that doesn't exist / malformed id / no session at all</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.9</td><td class="scenario"><span class="title">Book while signed in but with no client profile (a coach account)</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.10</td><td class="scenario"><span class="title">Book an already-started session — rejected</span><span class="note">Needs a session backdated in the DB; not reachable black-box (same gap the original Postman fixtures admit)</span></td><td><span class="status status--scenario">open</span></td></tr>
+            <tr><td class="id">7.11</td><td class="scenario"><span class="title">Grant credits as admin; grant as non-admin — forbidden</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.12</td><td class="scenario"><span class="title">Reverse more than the current balance — rejected, balance unchanged</span><span class="note">NOT A BUG — correctly rejected, balance untouched. Separate cosmetic-only finding: it comes back as HTTP 400, not the documented 422 — see §8, not a functional or security issue</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.13</td><td class="scenario"><span class="title">Reverse a valid amount; extend a lot's expiry</span></td><td><span class="status status--pass">pass</span></td></tr>
+            <tr><td class="id">7.14</td><td class="scenario"><span class="title">Materialise sessions as admin; as non-admin — forbidden</span><span class="note">Unauthenticated case covered by §6; non-admin-member case not isolated</span></td><td><span class="status status--scenario">open</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 8 ============ -->
+    <section class="cat" id="s8">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s8-body"><span class="num">08</span><h2>Findings surfaced only by running the suite</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s8-body">
+      <p class="cat-intro">
+        Everything above was written from reading the source first, then verified live. These
+        three only surfaced once the automated suite actually ran repeatedly against the live
+        instance — none were predicted by code reading alone.
+      </p>
+
+      <div class="finding">
+        <div class="tag">422</div>
+        <div>
+          <h3>InsufficientCreditsError is declared as HTTP 422 — it is never actually 422 on the wire <span class="status status--live" style="margin-left: 0.4rem">still open</span></h3>
+          <p>
+            <code>packages/services/credits/error.ts</code> declares it as <code>ServiceError(422, &hellip;)</code>,
+            and <code>documents/architecture/booking.md</code>'s error table documents 422 too. But
+            <code>packages/trpc/server/utils/http-status.ts</code>'s <code>HTTP_STATUS_TO_TRPC_CODE</code>
+            map has no tRPC error code for 422 — tRPC's own <code>TRPCError</code> only supports its
+            fixed standard-code enum — and falls back to <code>&quot;BAD_REQUEST&quot;</code>, which
+            the OpenAPI adapter serializes as HTTP 400. A client can't distinguish &ldquo;insufficient
+            credits&rdquo; from a generic validation error by status code alone — only the response
+            body's <code>message</code> string differs. The same root cause affects any other
+            <code>ServiceError</code> subclass whose declared status this map doesn't carry a 1:1
+            entry for. <strong style="color: var(--p2)">P2 — API-contract inconsistency, not a security issue.</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="tag">🔑</div>
+        <div>
+          <h3>Idempotency key alone is the dedupe identity — request parameters aren't checked <span class="status status--live" style="margin-left: 0.4rem">still open</span></h3>
+          <p>
+            Reusing a booking's idempotency key with a different <code>sessionId</code> returns
+            HTTP 200 with the <em>original</em> booking's data, not an error and not the new
+            session. <code>security.html</code> §7 requires keys to be &ldquo;bound to&hellip;
+            request parameters&rdquo; and reuse with different parameters to be rejected. Same bug
+            as §3.6 — not a separate item, just surfaced twice. See
+            <code>src/integration/bookings/happy-path.test.ts</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="tag">200</div>
+        <div>
+          <h3>Booking creation returns HTTP 200, not 201, despite the handler calling TRPCResponse.created() <span class="status status--live" style="margin-left: 0.4rem">still open</span></h3>
+          <p>
+            <code>trpc-to-openapi</code> doesn't infer 201 from a mutation by itself, and nothing in
+            the route's <code>.meta()</code> sets it explicitly. Cosmetic — but the response
+            message (&ldquo;Booking created&rdquo;) and the status code now disagree about whether
+            this was a creation.
+          </p>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 9 ============ -->
+    <section class="cat" id="s9">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s9-body"><span class="num">09</span><h2>What this suite deliberately does not attempt</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s9-body">
+      <ul class="scope-list">
+        <li><b>Infrastructure-layer requirements</b> (SEC-DATA-*, SEC-INFRA-*, SEC-OPS-*, SEC-SDLC-*) — no AWS/S3/CloudWatch/CI access from a black-box HTTP/browser vantage point.</li>
+        <li><b>Rate-limit enforcement (§5)</b> — nothing to assert against yet; a burst test today would only prove &ldquo;still unlimited,&rdquo; already known from reading the server config. Worth adding as a regression tripwire the moment a limiter ships.</li>
+        <li><b>The 5-minute session-cache staleness window (§2.7)</b> — needs an admin-plugin ban/role-change call plus a real wall-clock wait; documented as a scripted manual scenario, not automated here.</li>
+        <li><b>bookings.create with a genuinely foreign-org sessionId (§1.10)</b> — was ADR 0035's own acknowledged open gap, and still not reachable black-box (no route exists to obtain a foreign org's <code>sessionId</code>). <b>Fixed anyway as of 2026-09-15</b>: <code>bookings.create</code> now cross-checks the client's home centre and the session's centre resolve to the same org before booking, closing the gap at the code level even without a black-box way to attack it. Nothing left to automate against here.</li>
+        <li><b>sessions.getById with a foreign-org sessionId (§1's round-2 addendum)</b> — same shape as §1.10 above, same reason: no route exists to create a centre in a second org black-box.</li>
+        <li><b>credit-requests.create naming an arbitrary cross-org clientId (§1's round-2 addendum)</b> — real, code-confirmed gap, skipped for its fixture cost (a full invite&rarr;accept&rarr;complete-profile chain) relative to its lower-severity, different-shape payoff.</li>
+        <li><b>The +6 minute self-heal confirmation for §2.11's session-revocation window</b> — characterized once via a manual diagnostic; the standing automated check only asserts the immediate non-revocation.</li>
+      </ul>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 10 ============ -->
+    <section class="cat" id="s10">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s10-body"><span class="num">10</span><h2>How this maps to the app's own requirements</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s10-body">
+      <p class="cat-intro"><code>documents/internals/security.html</code> §14 defines testable requirements this suite directly targets:</p>
+      <div class="req-grid">
+        <div class="req-card"><span class="id">SEC-AUTH-01 / 02</span><p>§2 — session validation, role sourced from the DB, never from client input. Includes the §2.11 revocation-delay and §2.12 confirmation-email findings added 2026-09-14.</p></div>
+        <div class="req-card"><span class="id">SEC-API-01</span><p>§1, §6 and §6a — object/centre/coach-scope checks. Nine of the twelve confirmed P0/P1 cross-tenant findings are now fixed and re-verified (round 3, 2026-09-15); two P0s remain open — <code>coaches.list</code> and <code>credits.getBalancesForClients</code>.</p></div>
+        <div class="req-card"><span class="id">SEC-API-02</span><p>§3 — Zod coverage and malformed-input tests.</p></div>
+        <div class="req-card"><span class="id">SEC-INT-01</span><p>§4 — atomic, idempotent, audited financial operations.</p></div>
+      </div>
+      <p style="margin-top: 1rem; color: var(--ink-faint); font-size: 0.86rem">
+        SEC-DATA-*, SEC-INFRA-*, SEC-OPS-*, SEC-SDLC-* are infrastructure/ops-layer requirements
+        this black-box suite cannot exercise — out of scope here by design, not overlooked.
+      </p>
+      </div>
+    </section>
+
+    <!-- ============ SECTION 11 ============ -->
+    <section class="cat" id="s11">
+      <button type="button" class="cat-head" aria-expanded="true" aria-controls="s11-body"><span class="num">11</span><h2>Gaps in this QA effort — a self-assessment</h2><span class="cat-chevron" aria-hidden="true">&#9662;</span></button>
+      <div class="cat-body" id="s11-body">
+      <p class="cat-intro">
+        Everything above is a gap in the <i>app</i>. This section is the other direction: where
+        this <i>suite itself</i> is thin, asked plainly &mdash; &ldquo;where are the gaps, acting
+        like a QA automation engineer reviewing their own work.&rdquo; Ranked by risk, not by
+        effort to fix.
+      </p>
+
+      <h3 style="font-size: 1.02rem; margin: 1.6rem 0 0.7rem; color: var(--ink)">11.1 — Money-handling routes with zero functional test coverage</h3>
+      <p class="cat-intro" style="margin-bottom: 0.8rem">
+        The round-2 audit only asked one question of the new routers &mdash; <i>does the
+        cross-tenant bug repeat here?</i> For the ones that came back clean (§1's round-2 table),
+        that's the <b>only</b> thing that got tested. Nobody has run their actual happy path.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Untested surface</th><th>Why it matters</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="scenario"><span class="route">billing.createManualSale / fulfillPurchaseRequest / requestRenewal</span></td>
+              <td class="note" style="max-width: none">Records real payments and grants real credits &mdash; the highest-stakes new code in this release, and it has never been called by this suite, only read</td>
+              <td><span class="sev sev-p0">HIGH</span></td>
+            </tr>
+            <tr>
+              <td class="scenario"><span class="route">packages.create / update / listActive</span></td>
+              <td class="note" style="max-width: none">Defines what's purchasable and at what price &mdash; zero functional tests</td>
+              <td><span class="sev sev-p0">HIGH</span></td>
+            </tr>
+            <tr>
+              <td class="scenario"><span class="route">credit-requests.create / approve / reject / listPending</span></td>
+              <td class="note" style="max-width: none">The whole coach&rarr;owner approval workflow around credit grants has no test at all, not even a happy path</td>
+              <td><span class="sev sev-p0">HIGH</span></td>
+            </tr>
+            <tr>
+              <td class="scenario"><span class="route">clients.reassignCoach</span></td>
+              <td class="note" style="max-width: none">Flagged by the round-2 research as having no repository-layer defense-in-depth (relies entirely on the service-layer check running first) &mdash; exactly the kind of route a future refactor could silently break, and there's no regression test watching it</td>
+              <td><span class="sev sev-p1">MEDIUM</span></td>
+            </tr>
+            <tr>
+              <td class="scenario"><span class="route">attendance.mark / roster</span></td>
+              <td class="note" style="max-width: none">Coach-ownership check is code-confirmed only (§6a.4) &mdash; the actual attendance-marking flow has never run live</td>
+              <td><span class="sev sev-p1">MEDIUM</span></td>
+            </tr>
+            <tr>
+              <td class="scenario"><span class="route">organizations.invite (Flow 2, real email) / organizations.create (Flow 1)</span></td>
+              <td class="note" style="max-width: none">Both are only ever used as fixture-building shortcuts (via Better Auth's raw invite/accept) &mdash; the app's own business-role email-invite path and superadmin-onboarding guard are never directly asserted against</td>
+              <td><span class="sev sev-p1">MEDIUM</span></td>
+            </tr>
+            <tr>
+              <td class="scenario"><span class="route">staff.completeProfile, admin-dashboard.stats, credits.myActivePackages / listExpiringSoon, clients.search, scheduling.mySchedule</span></td>
+              <td class="note" style="max-width: none">Shipped, unauthenticated-request-tested only via the authorization matrix's generic sample &mdash; no route-specific test</td>
+              <td><span class="sev sev-p2">LOW</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size: 1.02rem; margin: 1.8rem 0 0.7rem; color: var(--ink)">11.2 — A full second portal shipped; one browser test exists</h3>
+      <p class="cat-intro" style="margin-bottom: 0.8rem">
+        <code>apps/web/app/admin/*</code> is an entire admin portal &mdash; dashboard, bookings,
+        clients, credits, invites, packages, payments, schedule, session-types, team &mdash; and
+        the staff/client portals both grew substantially too. This suite has exactly <b>one</b>
+        Playwright spec outside auth (<code>change-password.spec.ts</code>). Every one of these
+        screens has been clicked by nobody but the person who built it.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Untested UI</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="scenario"><span class="title">Entire /admin/* portal</span></td><td class="note" style="max-width: none">manual-sale-dialog, package-form-dialog, admin-payments-view, admin-schedule-view, session-type-form-dialog, class-template-form-dialog, invites-view &mdash; none exercised in a browser</td></tr>
+            <tr><td class="scenario"><span class="title">staff/my-schedule, staff/clients</span></td><td class="note" style="max-width: none">The coach's own scoped view (§6a proves the API-level restriction; the UI that surfaces it has never been opened)</td></tr>
+            <tr><td class="scenario"><span class="title">client/packages, client/sessions/[sessionId]</span></td><td class="note" style="max-width: none">Renewal-request UI, session detail view &mdash; untested</td></tr>
+            <tr><td class="scenario"><span class="title">/join/[slug], /accept-invitation/[id], /forgot-password, /reset-password, /sign-up</span></td><td class="note" style="max-width: none">Every non-sign-in auth/onboarding UI page &mdash; auth-qa-manual.html describes manual steps for these; none are automated</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size: 1.02rem; margin: 1.8rem 0 0.7rem; color: var(--ink)">11.3 — Test types never attempted, not just deferred</h3>
+      <ul class="scope-list">
+        <li><b>Injection/XSS/mass-assignment payloads (§3.2&ndash;3.4)</b> &mdash; still reasoned-safe-from-code-reading only. Cheap to close; should be first, not last.</li>
+        <li><b>CORS/Origin enforcement</b> &mdash; this suite's own <code>ApiClient</code> always sends a legitimate <code>Origin</code> header (Better Auth requires one); nothing here tries a <i>disallowed</i> origin to confirm the allowlist actually rejects it.</li>
+        <li><b>Contract/schema drift against the live OpenAPI spec</b> (<code>/openapi.json</code>) &mdash; would have caught the §8 422&rarr;400 and 200&rarr;201 mismatches structurally, by diffing declared vs. actual, instead of by accident.</li>
+        <li><b>Accessibility</b> &mdash; a real design system exists (<code>documents/internals/design/</code>); zero automated a11y checks (axe-core or equivalent) on any page.</li>
+        <li><b>Visual regression, cross-browser (Playwright is chromium-only), mobile viewport, load/perf beyond 2&ndash;3-way concurrency races</b> &mdash; none attempted.</li>
+      </ul>
+
+      <h3 style="font-size: 1.02rem; margin: 1.8rem 0 0.7rem; color: var(--ink)">11.4 — Process gaps that will bite before any of the above does</h3>
+      <ul class="scope-list">
+        <li><b>No CI wiring at all.</b> This entire suite has only ever run manually, from this session, against one long-lived local Postgres (6+ days uptime). It has never been proven to pass from a clean checkout.</li>
+        <li><b>No test-data isolation or teardown.</b> Every run leaves behind throwaway orgs, users, and credit lots in that same database, permanently. There's no ephemeral-DB-per-run (Testcontainers or equivalent), so the suite's own footprint grows without bound.</li>
+        <li><b>Shared mutable seed accounts, no reset.</b> owner@move.dev / coach@move.dev / client@move.dev are used across every file with no per-test isolation beyond picking distinct sessions manually &mdash; a genuinely broken test could leave state that fails an unrelated later one.</li>
+        <li><b>No coverage inventory.</b> This document lists scenarios that exist; it has never been checked against a literal enumeration of every tRPC procedure in the app to confirm nothing shipped with zero test of any kind touching it.</li>
+      </ul>
+      </div>
+    </section>
+
+    <footer>
+      <span>movethemovementclan-QA &middot; docs/scenarios.md</span>
+      <span>black-box · no app source or DB access</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  var activeStatus = new Set(["live", "fixed", "pass", "partial", "code", "scenario"]);
+  var activeSev = new Set(["p0", "p1", "p2"]);
+  var rows = Array.prototype.slice.call(document.querySelectorAll("tbody tr"));
+
+  function classKey(el, prefix) {
+    if (!el) return null;
+    var found = null;
+    el.classList.forEach(function (c) {
+      if (!found && c.indexOf(prefix) === 0) found = c.slice(prefix.length);
+    });
+    return found;
+  }
+
+  function statusKeyOf(row) {
+    return classKey(row.querySelector(".status"), "status--");
+  }
+
+  function sevKeyOf(row) {
+    var el = row.querySelector(".sev");
+    if (!el || !/^P[0-2]$/.test(el.textContent.trim())) return null;
+    return classKey(el, "sev-");
+  }
+
+  function apply() {
+    var shown = 0,
+      total = 0;
+    rows.forEach(function (row) {
+      var sKey = statusKeyOf(row);
+      var vKey = sevKeyOf(row);
+      if (sKey === null && vKey === null) return; // not a status/severity scenario row — leave untouched
+      total++;
+      var visible =
+        (sKey === null || activeStatus.has(sKey)) &&
+        (vKey === null || activeSev.has(vKey));
+      row.style.display = visible ? "" : "none";
+      if (visible) shown++;
+    });
+    var countEl = document.getElementById("filterCount");
+    if (countEl) countEl.textContent = shown + " of " + total + " scenario rows shown";
+  }
+
+  document.querySelectorAll(".filter-toggle").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var group = btn.getAttribute("data-filter");
+      var value = btn.getAttribute("data-value");
+      var set = group === "status" ? activeStatus : activeSev;
+      var pressed = btn.getAttribute("aria-pressed") === "true";
+      if (pressed) {
+        set.delete(value);
+        btn.setAttribute("aria-pressed", "false");
+      } else {
+        set.add(value);
+        btn.setAttribute("aria-pressed", "true");
+      }
+      apply();
+    });
+  });
+
+  var resetBtn = document.getElementById("filterReset");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      activeStatus = new Set(["live", "fixed", "pass", "partial", "code", "scenario"]);
+      activeSev = new Set(["p0", "p1", "p2"]);
+      document.querySelectorAll(".filter-toggle").forEach(function (btn) {
+        btn.setAttribute("aria-pressed", "true");
+      });
+      apply();
+    });
+  }
+
+  apply();
+
+  // ---------- collapsible sections ----------
+  function storageKey(id) {
+    return "fault-lines-collapsed:" + id;
+  }
+  function loadCollapsed(id) {
+    try {
+      return sessionStorage.getItem(storageKey(id)) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+  function saveCollapsed(id, collapsed) {
+    try {
+      sessionStorage.setItem(storageKey(id), collapsed ? "1" : "0");
+    } catch (e) {}
+  }
+  function setExpanded(head, expanded, persist) {
+    head.setAttribute("aria-expanded", expanded ? "true" : "false");
+    var body = document.getElementById(head.getAttribute("aria-controls"));
+    if (body) body.hidden = !expanded;
+    if (persist !== false) {
+      var section = head.closest(".cat");
+      if (section) saveCollapsed(section.id, !expanded);
+    }
+  }
+
+  var allHeads = Array.prototype.slice.call(document.querySelectorAll(".cat-head"));
+  allHeads.forEach(function (head) {
+    var section = head.closest(".cat");
+    var collapsed = section ? loadCollapsed(section.id) : false;
+    setExpanded(head, !collapsed, false);
+    head.addEventListener("click", function () {
+      setExpanded(head, head.getAttribute("aria-expanded") !== "true");
+    });
+  });
+
+  var expandAllBtn = document.getElementById("expandAllBtn");
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener("click", function () {
+      allHeads.forEach(function (head) {
+        setExpanded(head, true);
+      });
+    });
+  }
+  var collapseAllBtn = document.getElementById("collapseAllBtn");
+  if (collapseAllBtn) {
+    collapseAllBtn.addEventListener("click", function () {
+      allHeads.forEach(function (head) {
+        setExpanded(head, false);
+      });
+    });
+  }
+
+  document.querySelectorAll(".jump-link, .open-bug-link").forEach(function (link) {
+    link.addEventListener("click", function () {
+      var href = link.getAttribute("href") || "";
+      var section = document.getElementById(href.slice(1));
+      if (!section) return;
+      var head = section.querySelector(".cat-head");
+      if (head) setExpanded(head, true);
+    });
+  });
+})();
+</script>
+
+</body></html>
