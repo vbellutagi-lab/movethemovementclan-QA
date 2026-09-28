@@ -16,9 +16,10 @@ Two phases, in order:
    be pushed (in `../movethemovementclan`), figures out which features that diff introduces, checks
    whether this suite already covers them, and drafts new test cases for the gaps.
 2. **Regression phase** — runs `npm run regression` (Vitest integration + Playwright e2e against a
-   running instance), filing results under `regression-runs/<version>_<timestamp>/` — a
-   `SUMMARY.md`, the Playwright HTML report, failure screenshots/traces/video, and the integration
-   suite's JSON results. See [README.md](../../README.md) for the full layout.
+   running instance), filing results under `test-results/<version>_<timestamp>/` — an HTML report
+   (`SUMMARY.html`, with every failure screenshot linked/embedded), a plain-text `SUMMARY.md`, the
+   Playwright HTML report, failure screenshots/traces/video, and the integration suite's JSON
+   results. See [README.md](../../README.md) for the full layout.
 
 Skip phase 1 only if the user explicitly says to (`--skip-new-tests`) or says there's nothing new
 since the last regression run.
@@ -68,9 +69,15 @@ since the last regression run.
      is large (many unrelated feature areas) — confirm priority rather than covering everything
      blindly.
 
-6. **Verify the new tests compile.** Run `npm run typecheck` after adding files.
+6. **Register the new tests in `test-releases.json`.** Add each new file under `files` (or a
+   title fragment under `tests` for a test added to an existing file) with the release label the
+   user is shipping (e.g. `v1.2.0`). The HTML report uses this to separate failures introduced in
+   this release from pre-existing ones, so the user can decide what blocks the deploy. When a
+   release ships, update `baseline` to say "before <next release>" so its tests become baseline.
 
-7. **Summarize phase 1** to the user before moving on: which feature areas got new tests, which
+7. **Verify the new tests compile.** Run `npm run typecheck` after adding files.
+
+8. **Summarize phase 1** to the user before moving on: which feature areas got new tests, which
    were already covered, which were skipped and why (e.g. pure refactor, out of scope, needs their
    input).
 
@@ -94,7 +101,8 @@ since the last regression run.
    suite only. Let it run to completion — the integration suite in particular can take a while
    under rate-limit backoff (`QA_AUTOWAIT_RATE_LIMIT=true`, up to ~70 min timeout).
 
-4. **Report the result.** Read the run's `SUMMARY.md` and report to the user:
+4. **Report the result.** Read the run's `SUMMARY.md` (same content as `SUMMARY.html`, easier to
+   parse) and report to the user:
    - Overall pass/fail for each suite (counts for integration, exit code for e2e).
    - The path to the run folder and how to open the Playwright HTML report
      (`npx playwright show-report <path>/e2e/playwright-report`).

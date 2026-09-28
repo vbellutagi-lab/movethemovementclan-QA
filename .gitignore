@@ -4,7 +4,6 @@ dist/
 coverage/
 playwright-report/
 test-results/
-regression-runs/
 docs/change-summaries/
 .turbo/
 *.log

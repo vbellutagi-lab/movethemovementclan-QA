@@ -11,13 +11,13 @@
 //   npm run regression -- --skip-e2e
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const RUNS_ROOT = path.join(ROOT, "regression-runs");
+const RUNS_ROOT = path.join(ROOT, "test-results");
 
 const args = process.argv.slice(2);
 const skipIntegration = args.includes("--skip-integration");
@@ -63,6 +63,207 @@ function run(label, command, args, env) {
   return result.status ?? 1;
 }
 
+/** Recursively finds every screenshot Playwright wrote for this run (only exists on failure —
+ * see playwright.config.ts's screenshot: "only-on-failure"), for linking from SUMMARY.html. */
+function findScreenshots(dir) {
+  const found = [];
+  if (!existsSync(dir)) return found;
+  for (const entry of readdirSync(dir)) {
+    const full = path.join(dir, entry);
+    const stat = statSync(full);
+    if (stat.isDirectory()) {
+      found.push(...findScreenshots(full));
+    } else if (/\.(png|jpe?g)$/i.test(entry)) {
+      found.push(full);
+    }
+  }
+  return found;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+const RELEASES = existsSync(path.join(ROOT, "test-releases.json"))
+  ? JSON.parse(readFileSync(path.join(ROOT, "test-releases.json"), "utf-8"))
+  : {};
+const BASELINE = RELEASES.baseline ?? "baseline";
+
+/** Which release introduced this test: a per-test title match wins over the per-file entry. */
+function releaseFor(file, title) {
+  for (const [needle, rel] of Object.entries(RELEASES.tests ?? {})) {
+    if (title.includes(needle)) return rel;
+  }
+  const f = file.split(path.sep).join("/");
+  const hit = Object.entries(RELEASES.files ?? {}).find(([k]) => f === k || f.endsWith(k));
+  return hit ? hit[1] : BASELINE;
+}
+
+const stripAnsi = (t) => String(t ?? "").replace(/\u001b\[[0-9;]*m/g, "");
+const relFile = (f) => path.relative(ROOT, f);
+
+/** Flattens Vitest's JSON reporter output into [{ file, title, status, durationMs, error }]. */
+function readIntegrationTests(jsonPath) {
+  if (!existsSync(jsonPath)) return [];
+  const data = JSON.parse(readFileSync(jsonPath, "utf-8"));
+  return data.testResults.flatMap((f) =>
+    f.assertionResults.map((a) => ({
+      file: relFile(f.name),
+      title: [...(a.ancestorTitles ?? []), a.title].join(" › "),
+      status: a.status === "passed" ? "passed" : a.status === "failed" ? "failed" : "skipped",
+      durationMs: a.duration ?? 0,
+      error: stripAnsi((a.failureMessages ?? []).join("\n\n")),
+      release: releaseFor(relFile(f.name), [...(a.ancestorTitles ?? []), a.title].join(" › ")),
+    })),
+  );
+}
+
+/** Flattens Playwright's JSON reporter output the same way. */
+function readE2eTests(jsonPath) {
+  if (!existsSync(jsonPath)) return [];
+  const data = JSON.parse(readFileSync(jsonPath, "utf-8"));
+  const out = [];
+  const walk = (suite, trail) => {
+    const here = suite.title && !suite.file ? [...trail, suite.title] : trail;
+    for (const spec of suite.specs ?? []) {
+      for (const t of spec.tests ?? []) {
+        const last = t.results?.[t.results.length - 1];
+        const st = t.status === "expected" ? "passed" : t.status === "skipped" ? "skipped" : "failed";
+        out.push({
+          file: spec.file ?? suite.file ?? "",
+          title: [...here, spec.title].join(" › "),
+          status: st,
+          durationMs: (t.results ?? []).reduce((n, r) => n + (r.duration ?? 0), 0),
+          error: stripAnsi(last?.error?.message ?? ""),
+          release: releaseFor(spec.file ?? suite.file ?? "", [...here, spec.title].join(" › ")),
+        });
+      }
+    }
+    for (const child of suite.suites ?? []) walk(child, here);
+  };
+  for (const s of data.suites ?? []) walk(s, []);
+  return out;
+}
+
+const fmtMs = (ms) => (ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${Math.round(ms)} ms`);
+
+function testsSection(tests) {
+  if (!tests.length) return `<p class="skipped">No per-test data available.</p>`;
+  const count = (st) => tests.filter((t) => t.status === st).length;
+  const failed = tests.filter((t) => t.status === "failed");
+  const passed = tests.filter((t) => t.status === "passed");
+  const skipped = tests.filter((t) => t.status === "skipped");
+  const rows = (list, withError) =>
+    list
+      .map(
+        (t) => `<tr class="${t.status}"><td>${escapeHtml(t.file)}</td><td><span class="rel ${t.release === BASELINE ? "old" : "new"}">${escapeHtml(t.release)}</span></td><td>${escapeHtml(t.title)}${
+          withError && t.error
+            ? `<details><summary>Failure details</summary><pre>${escapeHtml(t.error)}</pre></details>`
+            : ""
+        }</td><td class="num">${fmtMs(t.durationMs)}</td></tr>`,
+      )
+      .join("\n");
+  const table = (list, withError) =>
+    `<table class="tests"><thead><tr><th>File</th><th>Release</th><th>Test</th><th>Time</th></tr></thead><tbody>${rows(list, withError)}</tbody></table>`;
+  return `<p><span class="badge pass">${count("passed")} passed</span> <span class="badge fail">${count("failed")} failed</span> <span class="badge skip">${count("skipped")} skipped</span> &middot; total time ${fmtMs(tests.reduce((n, t) => n + t.durationMs, 0))}</p>
+    ${(() => {
+      if (!failed.length) return `<p>No failed tests.</p>`;
+      const fresh = failed.filter((t) => t.release !== BASELINE);
+      const old = failed.filter((t) => t.release === BASELINE);
+      return `${fresh.length ? `<h3 class="fail">Failed — introduced in this release (${fresh.length}) — fix before deploying</h3>${table(fresh, true)}` : `<p>No failures among tests introduced in this release.</p>`}
+      ${old.length ? `<h3 class="fail">Failed — pre-existing, from ${escapeHtml(BASELINE)} (${old.length})</h3>${table(old, true)}` : ""}`;
+    })()}
+    <h3 class="pass">Passed (${passed.length})</h3>${passed.length ? table(passed, false) : "<p>None.</p>"}
+    ${skipped.length ? `<h3>Skipped (${skipped.length})</h3>${table(skipped, false)}` : ""}`;
+}
+
+function buildHtmlSummary({
+  runId,
+  version,
+  generatedAt,
+  skipIntegration,
+  skipE2e,
+  integrationStatus,
+  integrationSummary,
+  integrationTests,
+  e2eStatus,
+  e2eTests,
+  screenshots,
+  runDir,
+}) {
+  const overallOk =
+    (skipIntegration || integrationSummary?.success) && (skipE2e || e2eStatus === 0);
+  const badge = (ok) => `<span class="badge ${ok ? "pass" : "fail"}">${ok ? "PASS" : "FAIL"}</span>`;
+
+  const integrationSection = skipIntegration
+    ? `<p class="skipped">Skipped</p>`
+    : integrationSummary
+      ? `<p>${badge(integrationSummary.success)} &middot; <a href="integration/results.json">raw results (JSON)</a></p>${testsSection(integrationTests)}`
+      : `<p class="fail">Exit code ${integrationStatus} — no results.json found, check console output.</p>`;
+
+  const e2eSection = skipE2e
+    ? `<p class="skipped">Skipped</p>`
+    : `<p>${badge(e2eStatus === 0)} (exit code ${e2eStatus}) &middot; <a href="e2e/playwright-report/index.html">Playwright HTML report</a></p>
+       ${testsSection(e2eTests)}
+       ${
+         screenshots.length
+           ? `<h3>Failure screenshots (${screenshots.length})</h3>
+              <div class="shots">${screenshots
+                .map((s) => {
+                  const rel = path.relative(runDir, s);
+                  return `<figure><a href="${rel}"><img src="${rel}" loading="lazy" /></a><figcaption>${escapeHtml(rel)}</figcaption></figure>`;
+                })
+                .join("\n")}</div>`
+           : `<p>No failure screenshots (screenshots are only captured on failure).</p>`
+       }`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Regression report — ${escapeHtml(runId)}</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.5; }
+  h1 { font-size: 1.5rem; }
+  h2 { border-bottom: 1px solid #8884; padding-bottom: 0.3rem; margin-top: 2.5rem; }
+  h3.fail { color: #dc2626; } h3.pass { color: #16a34a; }
+  .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; }
+  .badge.pass { background: #16a34a22; color: #16a34a; }
+  .badge.fail { background: #dc262622; color: #dc2626; }
+  .badge.skip { background: #8882; color: #888; }
+  .skipped { color: #888; font-style: italic; }
+  .meta { color: #666; font-size: 0.9rem; }
+  table.tests { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  table.tests th { text-align: left; border-bottom: 2px solid #8886; padding: 0.35rem 0.6rem; }
+  table.tests td { border-bottom: 1px solid #8883; padding: 0.35rem 0.6rem; vertical-align: top; }
+  table.tests td:first-child { color: #888; word-break: break-all; width: 22%; }
+  table.tests td.num { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  tr.failed td:nth-child(3) { color: #dc2626; }
+  .rel { font-size: 0.72rem; padding: 0.1rem 0.45rem; border-radius: 999px; white-space: nowrap; }
+  .rel.new { background: #2563eb22; color: #2563eb; } .rel.old { background: #8882; color: #888; }
+  details { margin-top: 0.4rem; } summary { cursor: pointer; color: #888; }
+  pre { white-space: pre-wrap; background: #8881; padding: 0.6rem; border-radius: 4px; font-size: 0.78rem; max-height: 22rem; overflow: auto; }
+  .shots { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; }
+  .shots figure { margin: 0; width: 260px; }
+  .shots img { width: 100%; border: 1px solid #8884; border-radius: 4px; display: block; }
+  .shots figcaption { font-size: 0.75rem; color: #888; margin-top: 0.25rem; word-break: break-all; }
+</style>
+</head>
+<body>
+  <h1>Regression report — ${escapeHtml(runId)} ${badge(overallOk)}</h1>
+  <p class="meta">Version/release: <strong>${escapeHtml(version)}</strong> &middot; Generated: ${escapeHtml(generatedAt)}</p>
+
+  <h2>Integration suite (Vitest, API-level)</h2>
+  ${integrationSection}
+
+  <h2>E2e suite (Playwright, browser-level)</h2>
+  ${e2eSection}
+</body>
+</html>
+`;
+}
+
 function summarizeIntegrationResults(jsonPath) {
   if (!existsSync(jsonPath)) return null;
   try {
@@ -79,7 +280,36 @@ function summarizeIntegrationResults(jsonPath) {
   }
 }
 
+function rebuildReport(runId) {
+  const runDir = path.join(RUNS_ROOT, runId);
+  if (!existsSync(runDir)) {
+    console.error(`No such run: ${path.relative(ROOT, runDir)}`);
+    process.exit(1);
+  }
+  const integrationSummary = summarizeIntegrationResults(path.join(runDir, "integration", "results.json"));
+  const e2eJson = path.join(runDir, "e2e", "results.json");
+  const e2eTests = readE2eTests(e2eJson);
+  const html = buildHtmlSummary({
+    runId,
+    version: runId.replace(/_\d{4}-.*$/, ""),
+    generatedAt: new Date().toISOString(),
+    skipIntegration: !integrationSummary,
+    skipE2e: !existsSync(path.join(runDir, "e2e")),
+    integrationStatus: integrationSummary?.success ? 0 : 1,
+    integrationSummary,
+    integrationTests: readIntegrationTests(path.join(runDir, "integration", "results.json")),
+    e2eStatus: e2eTests.some((t) => t.status === "failed") ? 1 : 0,
+    e2eTests,
+    screenshots: findScreenshots(path.join(runDir, "e2e", "test-results")),
+    runDir,
+  });
+  writeFileSync(path.join(runDir, "SUMMARY.html"), html);
+  console.log(`Rebuilt ${path.relative(ROOT, path.join(runDir, "SUMMARY.html"))}`);
+}
+
 async function main() {
+  const rebuild = args.find((a) => a.startsWith("--rebuild="));
+  if (rebuild) return rebuildReport(rebuild.split("=")[1]);
   const version = sanitize(await promptVersion());
   const runId = `${version}_${timestamp()}`;
   const runDir = path.join(RUNS_ROOT, runId);
@@ -88,6 +318,10 @@ async function main() {
 
   console.log(`\nRegression run: ${runId}`);
   console.log(`Artifacts will be written to: ${path.relative(ROOT, runDir)}/`);
+
+  // Cached logins can carry state a previous run mutated (e.g. a nulled active organization),
+  // which then fails every later run. Start each regression from fresh sign-ins.
+  rmSync(path.join(ROOT, ".qa-cache"), { recursive: true, force: true });
 
   const env = { REGRESSION_RUN_DIR: runDir, QA_AUTOWAIT_RATE_LIMIT: "true" };
 
@@ -148,15 +382,36 @@ async function main() {
   ];
   writeFileSync(path.join(runDir, "SUMMARY.md"), summaryLines.join("\n"));
 
+  const screenshots = skipE2e ? [] : findScreenshots(path.join(runDir, "e2e", "test-results"));
+  const htmlSummary = buildHtmlSummary({
+    runId,
+    version,
+    generatedAt: new Date().toISOString(),
+    skipIntegration,
+    skipE2e,
+    integrationStatus,
+    integrationSummary,
+    integrationTests: readIntegrationTests(path.join(runDir, "integration", "results.json")),
+    e2eStatus,
+    e2eTests: readE2eTests(path.join(runDir, "e2e", "results.json")),
+    screenshots,
+    runDir,
+  });
+  writeFileSync(path.join(runDir, "SUMMARY.html"), htmlSummary);
+
   // Point a stable "latest" file at this run so it's easy to find without hunting by timestamp.
   writeFileSync(path.join(RUNS_ROOT, "LATEST"), runId + "\n");
 
   console.log(`\n=== Regression run ${runId} complete ===`);
-  console.log(`Summary: ${path.relative(ROOT, path.join(runDir, "SUMMARY.md"))}`);
+  console.log(`HTML report: ${path.relative(ROOT, path.join(runDir, "SUMMARY.html"))}`);
+  console.log(`Markdown summary: ${path.relative(ROOT, path.join(runDir, "SUMMARY.md"))}`);
   if (!skipE2e && existsSync(htmlReportIndex)) {
     console.log(
       `E2e HTML report: npx playwright show-report ${path.relative(ROOT, path.join(runDir, "e2e", "playwright-report"))}`,
     );
+  }
+  if (screenshots.length) {
+    console.log(`Failure screenshots: ${screenshots.length} (linked from SUMMARY.html)`);
   }
 
   const overallStatus = (skipIntegration ? 0 : integrationStatus) || (skipE2e ? 0 : e2eStatus);

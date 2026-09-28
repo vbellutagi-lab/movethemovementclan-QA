@@ -1,0 +1,14 @@
+{
+  "baseline": "baseline (before v1.2.0)",
+  "files": {
+    "src/integration/credits/manual-adjustment.test.ts": "v1.2.0",
+    "src/integration/bookings/cancellation-requests.test.ts": "v1.2.0",
+    "src/integration/bookings/session-stats-attendance.test.ts": "v1.2.0",
+    "src/integration/clients/client-detail.test.ts": "v1.2.0",
+    "src/integration/scheduling/class-template-soft-delete.test.ts": "v1.2.0",
+    "src/integration/billing/manual-sale-dedup.test.ts": "v1.2.0"
+  },
+  "tests": {
+    "closes docs/findings/4.12's open question": "v1.2.0"
+  }
+}

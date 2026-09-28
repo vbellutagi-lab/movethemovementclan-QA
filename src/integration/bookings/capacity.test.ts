@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { TIMED_OUT, type ApiClient } from "../../support/api-client";
 import {
+  listBookableSessions,
   pickEmptyGroupSessions,
   readSession,
   type SessionListItem,
@@ -44,6 +45,8 @@ import { signInAs, type SignedInSession } from "../../support/test-users";
 
 const POOL_SIZE = 10;
 const CREDIT_TYPE = "SGPT";
+/** pickEmptyGroupSessions treats everything except this as a bookable group session. */
+const CREDIT_TYPE_EXCLUDED = "PT";
 
 /**
  * Per-request ceiling for a booking in a race. Generous next to a healthy booking (tens of
@@ -80,10 +83,27 @@ async function raceForSeats(
   sessionId: string,
   keyPrefix: string,
 ): Promise<RaceResult> {
+  return raceForSessions(
+    racers.map((r) => ({ ...r, sessionId })),
+    keyPrefix,
+  );
+}
+
+/**
+ * Like {@link raceForSeats}, but each racer books its OWN session instead of all racers
+ * contending for one — used to isolate pure pool-connection pressure (every racer needs a
+ * `tx` connection) from row-lock contention (every racer wants the same `sessions` row). See
+ * the 4.12 open question this file's last test closes: does the connection count alone deadlock
+ * the pool, independent of any lock contention?
+ */
+async function raceForSessions(
+  racers: Array<{ label: string; client: ApiClient; sessionId: string }>,
+  keyPrefix: string,
+): Promise<RaceResult> {
   const t0 = performance.now();
 
   const attempts = await Promise.all(
-    racers.map(async ({ label, client }): Promise<AttemptTiming> => {
+    racers.map(async ({ label, client, sessionId }): Promise<AttemptTiming> => {
       const startOffsetMs = performance.now() - t0;
       const res = await client.post<{ data?: { id: string } }>(
         "/bookings",
@@ -181,6 +201,8 @@ describe("bookings — capacity ceiling & duplicate prevention (docs/scenarios.m
 
   /** Bookings created by the running test, cancelled in afterEach even if it threw. */
   let createdBookings: Array<{ client: ApiClient; bookingId: string }> = [];
+  /** Class templates created by the running test, soft-deleted in afterEach even if it threw. */
+  let createdTemplateIds: string[] = [];
   /** Capacity overrides applied by the running test, reverted in afterEach even if it threw. */
   let capacityOverrides: Array<{ sessionId: string; original: number }> = [];
 
@@ -213,7 +235,56 @@ describe("bookings — capacity ceiling & duplicate prevention (docs/scenarios.m
       ),
     );
     capacityOverrides = [];
+
+    // Deleting a template also cancels the not-yet-started sessions materialised from it.
+    await Promise.allSettled(
+      createdTemplateIds.map((id) =>
+        owner.client.post("/class-templates/delete", { id }, { timeoutMs: BOOKING_TIMEOUT_MS }),
+      ),
+    );
+    createdTemplateIds = [];
   }, 120_000);
+
+  /**
+   * Returns `count` distinct empty group sessions, creating throwaway class templates (and
+   * materialising them) if the seed data doesn't have enough. A freshly reseeded database only
+   * has a handful of future sessions, and the different-sessions race needs one per racer.
+   */
+  async function ensureEmptyGroupSessions(count: number): Promise<SessionListItem[]> {
+    const enough = async () =>
+      (await listBookableSessions(seedClient.client)).filter(
+        (s) => s.creditType !== CREDIT_TYPE_EXCLUDED && s.bookedCount === 0,
+      );
+    let available = await enough();
+    if (available.length >= count) return pickEmptyGroupSessions(seedClient.client, count);
+
+    const templates = await owner.client.get<{
+      data: Array<{ sessionTypeId: string; centreId: string; coachId: string }>;
+    }>("/class-templates");
+    const ref = templates.body?.data?.[0];
+    if (!ref) throw new Error("No class template to borrow ids from — is the instance seeded?");
+
+    const weekdays = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+    const tomorrow = weekdays[(new Date().getDay() + 1) % 7]!;
+    for (let i = 0; available.length + i < count; i++) {
+      const res = await owner.client.post<{ data: { id: string } }>("/class-templates", {
+        ...ref,
+        weekday: tomorrow,
+        startTime: `${String(5 + i).padStart(2, "0")}:00`,
+        capacity: 3,
+        activeFrom: new Date().toISOString().slice(0, 10),
+      });
+      expect(res.status).toBe(200);
+      createdTemplateIds.push(res.body!.data.id);
+    }
+    expect((await owner.client.post("/scheduling/materialise", {})).status).toBe(200);
+
+    available = await enough();
+    if (available.length < count) {
+      throw new Error(`Still only ${available.length} empty sessions after creating templates.`);
+    }
+    return pickEmptyGroupSessions(seedClient.client, count);
+  }
 
   /** Forces a session's capacity, remembering the original so afterEach can put it back. */
   async function setCapacity(session: SessionListItem, capacity: number): Promise<void> {
@@ -403,4 +474,53 @@ describe("bookings — capacity ceiling & duplicate prevention (docs/scenarios.m
     expect(after?.bookedCount).toBe(capacity);
     expect(after!.bookedCount).toBeLessThanOrEqual(after!.capacity);
   }, 180_000);
+
+  // ── The 4.12 open question: is this "any 10 concurrent bookings", not just same-session? ──
+
+  it(
+    `closes docs/findings/4.12's open question — ${POOL_SIZE} concurrent bookings of ${POOL_SIZE} ` +
+      `DIFFERENT sessions (zero row-lock contention) don't exhaust the connection pool either`,
+    async () => {
+      // Re-top-up rather than trust beforeAll's one-time grant: the immediately-preceding
+      // exact-fit test just spent every pool member's credit, and cancel-refund only fires
+      // ≥4h before a session's start (ADR 0027) — for a near-term seed session it doesn't, so a
+      // racer here could otherwise lose to "out of credit" (400) rather than the thing this test
+      // is actually checking, exactly the failure mode ensurePoolCredits' own docstring warns
+      // about.
+      await ensurePoolCredits(pool, CREDIT_TYPE, 1);
+
+      // Distinct sessions, one per racer — nobody contends for the same `sessions` row, so if
+      // this still stalls, the bug is "any N concurrent bookings" (pure connection pressure from
+      // chargeFor's tx + a second pickCreditLot connection), not "N bookings of one session".
+      // Before the docs/findings/4.12 fix (pickCreditLot threaded onto the booking's own tx),
+      // the mechanism predicts this deadlocks the pool exactly like the same-session races above,
+      // even though there is nothing here for a row lock to serialize.
+      const sessions = await ensureEmptyGroupSessions(POOL_SIZE);
+      const racers = pool.map((member, i) => ({
+        label: member.label,
+        client: member.client,
+        sessionId: sessions[i]!.id,
+      }));
+
+      const race = await raceForSessions(racers, "diff-sessions");
+      for (const w of race.winners) {
+        const member = pool.find((m) => m.label === w.label);
+        if (member && w.bookingId) {
+          createdBookings.push({ client: member.client, bookingId: w.bookingId });
+        }
+      }
+      reportRace(`${POOL_SIZE} clients → ${POOL_SIZE} distinct sessions (no lock contention)`, race, 1);
+      assertNoStalls(race, `${POOL_SIZE}-way concurrent bookings of ${POOL_SIZE} distinct sessions`);
+
+      // No capacity constraint and no shared row to contend over — every racer must win.
+      expect(race.winners).toHaveLength(POOL_SIZE);
+      expect(race.losers).toEqual([]);
+
+      for (const session of sessions) {
+        const after = await readSession(seedClient.client, session.id);
+        expect(after?.bookedCount).toBe(1);
+      }
+    },
+    180_000,
+  );
 });

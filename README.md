@@ -46,20 +46,28 @@ npm run regression -- v1.2.0 --skip-e2e           # integration only
 ```
 
 Runs the integration suite (Vitest, API-level) and the e2e suite (Playwright, browser-level)
-back to back and files everything under `regression-runs/<version>_<timestamp>/`:
+back to back and files everything under `test-results/<version>_<timestamp>/`:
 
 ```
-regression-runs/v1.2.0_2026-09-25_15-45-57/
-  SUMMARY.md                          pass/fail counts + links, read this first
+test-results/v1.2.0_2026-09-25_15-45-57/
+  SUMMARY.html                        the report — open this in a browser, read this first
+  SUMMARY.md                          same summary as plain text/markdown
   integration/results.json            raw Vitest JSON results
-  e2e/playwright-report/index.html    open with: npx playwright show-report <path>
+  e2e/playwright-report/index.html    Playwright's own HTML report — open with:
+                                       npx playwright show-report <path>
   e2e/test-results/                   failure screenshots, traces, video (per Playwright's
-                                       screenshot: "only-on-failure" in playwright.config.ts)
+                                       screenshot: "only-on-failure" in playwright.config.ts) —
+                                       SUMMARY.html embeds/links every screenshot from here
 ```
 
-Nothing here overwrites a previous run — every run gets its own folder, so past regression
-results stay around for comparison. `regression-runs/LATEST` always names the most recent run.
-This folder isn't committed (see `.gitignore`); treat it as local/CI build output.
+`SUMMARY.html` lists every test (file, release, time, failure details). Each test is stamped with
+the release that introduced it via `test-releases.json` (unlisted tests count as `baseline`), and
+failures are split into "introduced in this release" vs "pre-existing" so you can tell what blocks
+a deploy. Regenerate an old run's report with `node scripts/run-regression.mjs --rebuild=<runId>`.
+
+Nothing here overwrites a previous run — every run gets its own dated, versioned subfolder, so
+past regression results stay around for comparison. `test-results/LATEST` always names the most
+recent run. This folder isn't committed (see `.gitignore`); treat it as local/CI build output.
 
 ## Adding test cases for a new feature (tag → develop diff)
 

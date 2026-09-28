@@ -16,7 +16,11 @@ export default defineConfig({
   fullyParallel: false, // shared seeded users/orgs — avoid cross-test session clobbering
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: [["list"], ["html", { open: "never", outputFolder: htmlReportDir }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: htmlReportDir }],
+    ...(RUN_DIR ? [["json", { outputFile: `${RUN_DIR}/e2e/results.json` }] as const] : []),
+  ],
   use: {
     baseURL: WEB_BASE_URL,
     trace: "retain-on-failure",
