@@ -6,7 +6,14 @@
     "src/integration/bookings/session-stats-attendance.test.ts": "v1.2.0",
     "src/integration/clients/client-detail.test.ts": "v1.2.0",
     "src/integration/scheduling/class-template-soft-delete.test.ts": "v1.2.0",
-    "src/integration/billing/manual-sale-dedup.test.ts": "v1.2.0"
+    "src/integration/billing/manual-sale-dedup.test.ts": "v1.2.0",
+    "src/integration/credit-types/credit-types-crud.test.ts": "feature/credit-types",
+    "src/integration/credit-types/credit-types-authz.test.ts": "feature/credit-types",
+    "src/integration/credit-types/credit-types-lifecycle.test.ts": "feature/credit-types",
+    "src/e2e/credit-types/credit-types-admin.spec.ts": "feature/credit-types",
+    "src/e2e/credit-types/portal-access-guard.spec.ts": "feature/credit-types",
+    "src/e2e/credit-types/session-type-active.spec.ts": "feature/credit-types",
+    "src/e2e/credit-types/client-credit-types.spec.ts": "feature/credit-types"
   },
   "tests": {
     "closes docs/findings/4.12's open question": "v1.2.0"

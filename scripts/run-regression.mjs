@@ -147,34 +147,72 @@ function readE2eTests(jsonPath) {
 
 const fmtMs = (ms) => (ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${Math.round(ms)} ms`);
 
-function testsSection(tests) {
+/** First meaningful line of a failure, for the at-a-glance view (full text stays in <details>). */
+function firstErrorLine(err) {
+  const line = String(err ?? "").split("\n").map((l) => l.trim()).find((l) => l && !/^at\s/.test(l));
+  return line ? line.slice(0, 220) : "";
+}
+
+const shortFile = (f) => String(f).replace(/^src\/(integration|e2e)\//, "");
+
+function testsSection(tests, suiteId) {
   if (!tests.length) return `<p class="skipped">No per-test data available.</p>`;
   const count = (st) => tests.filter((t) => t.status === st).length;
   const failed = tests.filter((t) => t.status === "failed");
-  const passed = tests.filter((t) => t.status === "passed");
-  const skipped = tests.filter((t) => t.status === "skipped");
-  const rows = (list, withError) =>
-    list
-      .map(
-        (t) => `<tr class="${t.status}"><td>${escapeHtml(t.file)}</td><td><span class="rel ${t.release === BASELINE ? "old" : "new"}">${escapeHtml(t.release)}</span></td><td>${escapeHtml(t.title)}${
-          withError && t.error
-            ? `<details><summary>Failure details</summary><pre>${escapeHtml(t.error)}</pre></details>`
-            : ""
-        }</td><td class="num">${fmtMs(t.durationMs)}</td></tr>`,
-      )
-      .join("\n");
-  const table = (list, withError) =>
-    `<table class="tests"><thead><tr><th>File</th><th>Release</th><th>Test</th><th>Time</th></tr></thead><tbody>${rows(list, withError)}</tbody></table>`;
-  return `<p><span class="badge pass">${count("passed")} passed</span> <span class="badge fail">${count("failed")} failed</span> <span class="badge skip">${count("skipped")} skipped</span> &middot; total time ${fmtMs(tests.reduce((n, t) => n + t.durationMs, 0))}</p>
-    ${(() => {
-      if (!failed.length) return `<p>No failed tests.</p>`;
-      const fresh = failed.filter((t) => t.release !== BASELINE);
-      const old = failed.filter((t) => t.release === BASELINE);
-      return `${fresh.length ? `<h3 class="fail">Failed — introduced in this release (${fresh.length}) — fix before deploying</h3>${table(fresh, true)}` : `<p>No failures among tests introduced in this release.</p>`}
-      ${old.length ? `<h3 class="fail">Failed — pre-existing, from ${escapeHtml(BASELINE)} (${old.length})</h3>${table(old, true)}` : ""}`;
-    })()}
-    <h3 class="pass">Passed (${passed.length})</h3>${passed.length ? table(passed, false) : "<p>None.</p>"}
-    ${skipped.length ? `<h3>Skipped (${skipped.length})</h3>${table(skipped, false)}` : ""}`;
+  const icon = { passed: "✓", failed: "✗", skipped: "–" };
+
+  const row = (t) => {
+    const parts = t.title.split(" › ");
+    const name = parts.pop();
+    const group = parts.join(" › ");
+    return `<li class="t ${t.status}">
+      <span class="ic">${icon[t.status]}</span>
+      <div class="tb">
+        <div class="tn">${escapeHtml(name)}${t.release !== BASELINE ? ` <span class="rel new" title="introduced in ${escapeHtml(t.release)}">new</span>` : ""}</div>
+        ${t.status === "failed" ? `<div class="err">${escapeHtml(firstErrorLine(t.error))}</div>` : ""}
+        ${t.status === "failed" && t.error ? `<details><summary>Full failure details</summary><pre>${escapeHtml(t.error)}</pre></details>` : ""}
+      </div>
+      <span class="tt">${fmtMs(t.durationMs)}</span>
+    </li>`;
+  };
+
+  // Group by file, failing files first, then alphabetically.
+  const byFile = new Map();
+  for (const t of tests) {
+    if (!byFile.has(t.file)) byFile.set(t.file, []);
+    byFile.get(t.file).push(t);
+  }
+  const files = [...byFile.entries()].sort(([fa, ta], [fb, tb]) => {
+    const fail = (l) => l.some((x) => x.status === "failed") ? 0 : 1;
+    return fail(ta) - fail(tb) || fa.localeCompare(fb);
+  });
+
+  const fileBlocks = files
+    .map(([file, list]) => {
+      const nf = list.filter((x) => x.status === "failed").length;
+      const np = list.filter((x) => x.status === "passed").length;
+      const ns = list.filter((x) => x.status === "skipped").length;
+      const ordered = [...list].sort((x, y) => (x.status === "failed" ? 0 : 1) - (y.status === "failed" ? 0 : 1));
+      return `<details class="file ${nf ? "has-fail" : ""}" ${nf ? "open" : ""}>
+        <summary><span class="fname">${escapeHtml(shortFile(file))}</span>
+          <span class="fcount">${nf ? `<b class="fail">${nf} failed</b> · ` : ""}${np} passed${ns ? ` · ${ns} skipped` : ""}</span></summary>
+        <ul class="tests">${ordered.map(row).join("\n")}</ul>
+      </details>`;
+    })
+    .join("\n");
+
+  const fresh = failed.filter((t) => t.release !== BASELINE).length;
+  const note = !failed.length
+    ? ""
+    : fresh
+      ? `<p class="note fail">${fresh} failure${fresh === 1 ? "" : "s"} in tests introduced in this release — fix before deploying.</p>`
+      : `<p class="note">All ${failed.length} failures are in pre-existing tests (none in tests introduced in this release).</p>`;
+
+  return `<div class="counts"><span class="badge pass">${count("passed")} passed</span> <span class="badge fail">${count("failed")} failed</span> <span class="badge skip">${count("skipped")} skipped</span>
+    <span class="meta">· ${fmtMs(tests.reduce((n, t) => n + t.durationMs, 0))} total</span></div>
+    ${note}
+    <div class="filebar"><span class="meta">${files.length} files</span> <button type="button" onclick="toggleAll('${suiteId}', true)">Expand all</button> <button type="button" onclick="toggleAll('${suiteId}', false)">Collapse all</button></div>
+    <div id="${suiteId}">${fileBlocks}</div>`;
 }
 
 function buildHtmlSummary({
@@ -198,13 +236,13 @@ function buildHtmlSummary({
   const integrationSection = skipIntegration
     ? `<p class="skipped">Skipped</p>`
     : integrationSummary
-      ? `<p>${badge(integrationSummary.success)} &middot; <a href="integration/results.json">raw results (JSON)</a></p>${testsSection(integrationTests)}`
+      ? `<p>${badge(integrationSummary.success)} &middot; <a href="integration/results.json">raw results (JSON)</a></p>${testsSection(integrationTests, "integration-files")}`
       : `<p class="fail">Exit code ${integrationStatus} — no results.json found, check console output.</p>`;
 
   const e2eSection = skipE2e
     ? `<p class="skipped">Skipped</p>`
     : `<p>${badge(e2eStatus === 0)} (exit code ${e2eStatus}) &middot; <a href="e2e/playwright-report/index.html">Playwright HTML report</a></p>
-       ${testsSection(e2eTests)}
+       ${testsSection(e2eTests, "e2e-files")}
        ${
          screenshots.length
            ? `<h3>Failure screenshots (${screenshots.length})</h3>
@@ -223,41 +261,69 @@ function buildHtmlSummary({
 <meta charset="utf-8" />
 <title>Regression report — ${escapeHtml(runId)}</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.5; }
-  h1 { font-size: 1.5rem; }
-  h2 { border-bottom: 1px solid #8884; padding-bottom: 0.3rem; margin-top: 2.5rem; }
-  h3.fail { color: #dc2626; } h3.pass { color: #16a34a; }
-  .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; }
-  .badge.pass { background: #16a34a22; color: #16a34a; }
-  .badge.fail { background: #dc262622; color: #dc2626; }
-  .badge.skip { background: #8882; color: #888; }
-  .skipped { color: #888; font-style: italic; }
-  .meta { color: #666; font-size: 0.9rem; }
-  table.tests { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
-  table.tests th { text-align: left; border-bottom: 2px solid #8886; padding: 0.35rem 0.6rem; }
-  table.tests td { border-bottom: 1px solid #8883; padding: 0.35rem 0.6rem; vertical-align: top; }
-  table.tests td:first-child { color: #888; word-break: break-all; width: 22%; }
-  table.tests td.num { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
-  tr.failed td:nth-child(3) { color: #dc2626; }
-  .rel { font-size: 0.72rem; padding: 0.1rem 0.45rem; border-radius: 999px; white-space: nowrap; }
-  .rel.new { background: #2563eb22; color: #2563eb; } .rel.old { background: #8882; color: #888; }
-  details { margin-top: 0.4rem; } summary { cursor: pointer; color: #888; }
-  pre { white-space: pre-wrap; background: #8881; padding: 0.6rem; border-radius: 4px; font-size: 0.78rem; max-height: 22rem; overflow: auto; }
+  :root { color-scheme: light dark; --bd: #8884; --mut: #777; --ok: #16a34a; --bad: #dc2626; --card: #8881; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 1000px; margin: 2rem auto; padding: 0 1.25rem 4rem; line-height: 1.5; }
+  h1 { font-size: 1.4rem; margin: 0 0 0.25rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  h2 { font-size: 1.1rem; margin: 2.5rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--bd); display: flex; align-items: center; gap: 0.6rem; }
+  h3 { font-size: 0.95rem; margin: 1.5rem 0 0.5rem; }
+  .meta { color: var(--mut); font-size: 0.85rem; }
+  .badge { display: inline-block; padding: 0.12rem 0.65rem; border-radius: 999px; font-weight: 600; font-size: 0.8rem; }
+  .badge.pass { background: #16a34a22; color: var(--ok); } .badge.fail { background: #dc262622; color: var(--bad); } .badge.skip { background: #8882; color: var(--mut); }
+  .skipped { color: var(--mut); font-style: italic; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin: 1.25rem 0; }
+  .card { background: var(--card); border: 1px solid var(--bd); border-radius: 10px; padding: 0.9rem 1rem; }
+  .card .k { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mut); }
+  .card .v { font-size: 1.6rem; font-weight: 700; line-height: 1.2; } .card .v.bad { color: var(--bad); } .card .v.ok { color: var(--ok); }
+  .card .s { font-size: 0.8rem; color: var(--mut); }
+  .counts { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .note { margin: 0.75rem 0; padding: 0.6rem 0.9rem; border-left: 3px solid var(--mut); background: var(--card); border-radius: 4px; font-size: 0.9rem; }
+  .note.fail { border-color: var(--bad); }
+  .filebar { display: flex; gap: 0.5rem; align-items: center; margin: 1rem 0 0.5rem; }
+  .filebar button { font: inherit; font-size: 0.78rem; padding: 0.15rem 0.6rem; border: 1px solid var(--bd); background: transparent; color: inherit; border-radius: 6px; cursor: pointer; }
+  details.file { border: 1px solid var(--bd); border-radius: 8px; margin: 0.4rem 0; background: transparent; }
+  details.file.has-fail { border-color: #dc262666; }
+  details.file > summary { cursor: pointer; padding: 0.55rem 0.8rem; display: flex; justify-content: space-between; gap: 1rem; list-style: none; }
+  details.file > summary::-webkit-details-marker { display: none; }
+  details.file > summary::before { content: "▸"; color: var(--mut); margin-right: 0.5rem; }
+  details.file[open] > summary::before { content: "▾"; }
+  .fname { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; flex: 1; word-break: break-all; }
+  .fcount { font-size: 0.8rem; color: var(--mut); white-space: nowrap; } b.fail { color: var(--bad); }
+  ul.tests { list-style: none; margin: 0; padding: 0 0.8rem 0.5rem; }
+  li.t { display: flex; gap: 0.6rem; padding: 0.4rem 0; border-top: 1px solid #8882; align-items: flex-start; font-size: 0.88rem; }
+  li.t .ic { width: 1rem; font-weight: 700; flex: none; } li.passed .ic { color: var(--ok); } li.failed .ic { color: var(--bad); } li.skipped .ic { color: var(--mut); }
+  li.t .tb { flex: 1; min-width: 0; } li.t .tn { overflow-wrap: anywhere; } li.failed .tn { font-weight: 600; }
+  li.t .tt { color: var(--mut); font-size: 0.78rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .err { color: var(--bad); font-size: 0.8rem; margin-top: 0.15rem; overflow-wrap: anywhere; }
+  .rel.new { font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: 999px; background: #2563eb22; color: #2563eb; vertical-align: middle; }
+  details:not(.file) { margin-top: 0.3rem; } details:not(.file) summary { cursor: pointer; color: var(--mut); font-size: 0.78rem; }
+  pre { white-space: pre-wrap; background: var(--card); padding: 0.6rem; border-radius: 6px; font-size: 0.75rem; max-height: 20rem; overflow: auto; }
   .shots { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; }
-  .shots figure { margin: 0; width: 260px; }
-  .shots img { width: 100%; border: 1px solid #8884; border-radius: 4px; display: block; }
-  .shots figcaption { font-size: 0.75rem; color: #888; margin-top: 0.25rem; word-break: break-all; }
+  .shots figure { margin: 0; width: 240px; } .shots img { width: 100%; border: 1px solid var(--bd); border-radius: 6px; display: block; }
+  .shots figcaption { font-size: 0.72rem; color: var(--mut); margin-top: 0.25rem; word-break: break-all; }
+  a { color: #2563eb; }
 </style>
+<script>
+  function toggleAll(id, open) { document.querySelectorAll('#' + id + ' details.file').forEach(function (d) { d.open = open; }); }
+</script>
 </head>
 <body>
-  <h1>Regression report — ${escapeHtml(runId)} ${badge(overallOk)}</h1>
-  <p class="meta">Version/release: <strong>${escapeHtml(version)}</strong> &middot; Generated: ${escapeHtml(generatedAt)}</p>
+  <h1>Regression report ${badge(overallOk)}</h1>
+  <p class="meta">Release <strong>${escapeHtml(version)}</strong> &middot; ${escapeHtml(generatedAt)} &middot; run ${escapeHtml(runId)}</p>
 
-  <h2>Integration suite (Vitest, API-level)</h2>
+  <div class="cards">
+    <div class="card"><div class="k">Integration (API)</div>
+      <div class="v ${integrationSummary && !integrationSummary.success ? "bad" : "ok"}">${skipIntegration ? "Skipped" : integrationSummary ? `${integrationSummary.numPassedTests} / ${integrationSummary.numTotalTests}` : "No data"}</div>
+      <div class="s">${integrationSummary ? `${integrationSummary.numFailedTests} failed · ${integrationSummary.numPendingTests ?? 0} skipped` : ""}</div></div>
+    <div class="card"><div class="k">E2E (browser)</div>
+      <div class="v ${e2eStatus === 0 ? "ok" : "bad"}">${skipE2e ? "Skipped" : `${e2eTests.filter((t) => t.status === "passed").length} / ${e2eTests.length}`}</div>
+      <div class="s">${skipE2e ? "" : `${e2eTests.filter((t) => t.status === "failed").length} failed · <a href="e2e/playwright-report/index.html">Playwright report</a>`}</div></div>
+  </div>
+
+  <h2>Integration suite <span class="meta">Vitest, API-level</span></h2>
   ${integrationSection}
 
-  <h2>E2e suite (Playwright, browser-level)</h2>
+  <h2>E2E suite <span class="meta">Playwright, browser-level</span></h2>
   ${e2eSection}
 </body>
 </html>

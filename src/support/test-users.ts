@@ -10,6 +10,10 @@ export const SEED_USERS = {
   coach: { email: "coach@move.dev", label: "coach (org member role)" },
   staff: { email: "staff@move.dev", label: "front-desk staff (org member role)" },
   client: { email: "client@move.dev", label: "gym customer / client" },
+  // Added with feature/credit-types' fuller seed: a second coach and two more clients (client3 belongs to coach2).
+  coach2: { email: "coach2@move.dev", label: "second coach (org member role)" },
+  client2: { email: "client2@move.dev", label: "second client of coach 1" },
+  client3: { email: "client3@move.dev", label: "client of coach 2" },
 } as const;
 
 export type SeedUserKey = keyof typeof SEED_USERS;
