@@ -13,7 +13,13 @@
     "src/e2e/credit-types/credit-types-admin.spec.ts": "feature/credit-types",
     "src/e2e/credit-types/portal-access-guard.spec.ts": "feature/credit-types",
     "src/e2e/credit-types/session-type-active.spec.ts": "feature/credit-types",
-    "src/e2e/credit-types/client-credit-types.spec.ts": "feature/credit-types"
+    "src/e2e/credit-types/client-credit-types.spec.ts": "feature/credit-types",
+    "src/integration/member-lifecycle/lifecycle-authz.test.ts": "feature/coach-client-profile-crud",
+    "src/integration/member-lifecycle/client-pause-resume.test.ts": "feature/coach-client-profile-crud",
+    "src/integration/member-lifecycle/client-archive-restore.test.ts": "feature/coach-client-profile-crud",
+    "src/integration/member-lifecycle/coach-archive-restore.test.ts": "feature/coach-client-profile-crud",
+    "src/integration/member-lifecycle/coach-archive-sessions.test.ts": "feature/coach-client-profile-crud",
+    "src/integration/member-lifecycle/lifecycle-regression.test.ts": "feature/coach-client-profile-crud"
   },
   "tests": {
     "closes docs/findings/4.12's open question": "v1.2.0"
